@@ -520,7 +520,7 @@ if page == "Dashboard":
         draft_body = (
     "{paper['authors']} is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
     + "\nWithin our core scope - [add description of paper topic]"
-    + "\nForthcoming - ({paper['journal']}" if paper['journal'] else "")"
+    + (f"\nForthcoming - {paper['journal']}" if paper['journal'] else "")
     + "\nRecommend featuring / skipping - brief description"
     + "\n\nBest regards,\nPCG Team"
 )
