@@ -515,25 +515,32 @@ page = st.sidebar.radio(
 if page == "Dashboard":
 
     if st.session_state["show_email_draft"] and st.session_state["draft_paper_data"]:
-        paper = st.session_state["draft_paper_data"]
-        subject = paper.get("subject", f"Academic Option – {paper['authors']}, {paper['title']}")
-        draft_body = (
-    "{paper['authors']} is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
-    + "\nWithin our core scope - [add description of paper topic]"
-    + (f"\nForthcoming - {paper['journal']}" if paper['journal'] else "")
-    + "\nRecommend featuring / skipping - brief description"
-    + "\n\nBest regards,\nPCG Team"
-)
-        with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
-            st.markdown("**To:** Forum Editors <forumeditors@corpgov.law.harvard.edu>  \n"
-                        "**Cc:** Lucian Bebchuk <bebchuk@law.harvard.edu>; "
-                        "Kobi Kastiel <kastiel@tauex.tau.ac.il>; "
-                        "Anna Toniolo <atoniolo@corpgov.law.harvard.edu>")
-            st.code(draft_body, language="markdown")
-            if st.button("Dismiss Email Draft"):
-                st.session_state["show_email_draft"] = False
-                st.session_state["draft_paper_data"] = None
-                st.rerun()
+    paper = st.session_state["draft_paper_data"]
+    # Get last names from each author
+    last_names = [a.split()[-1] for a in paper["authors"]]
+    subject = f"Academic Option – {', '.join(last_names)}, {paper['title']}"
+    authors_line = ', '.join(paper["authors"])
+    draft_body = (
+        f"{authors_line} is a [fast track / prominent / solid / rising/ obscure law /finance prof at a "
+        "[top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), "
+        "non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), "
+        "add additional authors if applicable"
+        "\nWithin our core scope - [add description of paper topic]"
+        f"\nForthcoming - {paper['journal'] if paper['journal'] else '[Journal Name]'}"
+        "\nRecommend featuring / skipping - brief description"
+        "\n\nBest regards,\nPCG Team"
+    )
+    with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
+        st.markdown("**To:** Forum Editors <forumeditors@corpgov.law.harvard.edu>  \n"
+                    "**Cc:** Lucian Bebchuk <bebchuk@law.harvard.edu>; "
+                    "Kobi Kastiel <kastiel@tauex.tau.ac.il>; "
+                    "Anna Toniolo <atoniolo@corpgov.law.harvard.edu>")
+        st.markdown(f"**Subject:** {subject}")
+        st.code(draft_body, language="markdown")
+        if st.button("Dismiss Email Draft"):
+            st.session_state["show_email_draft"] = False
+            st.session_state["draft_paper_data"] = None
+            st.rerun()
 
     col1, col2, col3 = st.columns([2, 2, 2])
 
