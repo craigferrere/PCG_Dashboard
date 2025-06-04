@@ -516,15 +516,12 @@ if page == "Dashboard":
 
     if st.session_state["show_email_draft"] and st.session_state["draft_paper_data"]:
         paper = st.session_state["draft_paper_data"]
+        subject = paper.get("subject", f"Academic Option – {paper['authors']}, {paper['title']}")
         draft_body = (
-    "LN is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
+    "{paper['authors']} is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
     + "\nWithin our core scope - [add description of paper topic]"
-    + "\nForthcoming - Journal where the paper will be published."
+    + "\nForthcoming - ({paper['journal']}" if paper['journal'] else "")"
     + "\nRecommend featuring / skipping - brief description"
-    + f"\n\nTitle: {paper['title']}"
-    + f"\nAuthors: {', '.join(paper['authors'])}"
-    + (f"\nJournal: {paper['journal']}" if paper['journal'] else "")
-    + (f"\nAffiliations: {', '.join(paper['affiliations'])}" if paper['affiliations'] else "")
     + "\n\nBest regards,\nPCG Team"
 )
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
