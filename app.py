@@ -613,30 +613,6 @@ if page == "Dashboard":
                         # move it into column 2 for this session
                         st.session_state["optioned_papers"].append(paper)
                         st.session_state["papers_to_show"].pop(idx)
-                        #try:
-                            #pythoncom.CoInitialize()
-                            #outlook = win32com.client.Dispatch("Outlook.Application")
-                            #mail = outlook.CreateItem(0)
-                        # On Streamlit Cloud, Outlook COM integration is not available.
-                        # See the Draft Email box below!
-
-                        #mail.To = "forumeditors@corpgov.law.harvard.edu"
-                        #mail.CC = "bebchuk@law.harvard.edu;kastiel@tauex.tau.ac.il;atoniolo@corpgov.law.harvard.edu"
-                        #mail.Subject = f"Academic Option – {paper['title']}"
-                        #mail.Body = (
-                            #"LN is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
-                            #+ "\nWithin our core scope - [add description of paper topic]"
-                            #+ "\nForthcoming - Journal where the paper will be published."
-                            #+ "\nRecommend featuring / skipping - brief description"
-                            #+ f"\nTitle: {paper['title']}"
-                            #+ f"\nAuthors: {', '.join(clean_authors)}"
-                            #+ (f"\nJournal: {paper['journal']}" if paper['journal'] else "")
-                            #+ (f"\nAffiliations: {affiliations_line}" if affiliations_line else "")
-                            #+ "\n\n"
-                        #)
-                        #mail.Display()
-                        #except Exception as e
-                            #st.warning(f"Could not open Outlook to create draft: {e}")
                        # Prepare email draft data for the expander at the top
                         st.session_state["show_email_draft"] = True
                         st.session_state["draft_paper_data"] = {
