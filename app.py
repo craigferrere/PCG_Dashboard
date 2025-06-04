@@ -517,12 +517,16 @@ if page == "Dashboard":
     if st.session_state["show_email_draft"] and st.session_state["draft_paper_data"]:
         paper = st.session_state["draft_paper_data"]
         draft_body = (
-            f"Dear Forum Editors,\n\n"
-            f"We would like to solicit a post on the following new paper:\n\n"
-            f"Title: {paper['title']}\n"
-            f"Authors: {', '.join(paper['authors'])}\n\n"
-            f"Best regards,\nPCG Team"
-        )
+    "LN is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
+    + "\nWithin our core scope - [add description of paper topic]"
+    + "\nForthcoming - Journal where the paper will be published."
+    + "\nRecommend featuring / skipping - brief description"
+    + f"\n\nTitle: {paper['title']}"
+    + f"\nAuthors: {', '.join(paper['authors'])}"
+    + (f"\nJournal: {paper['journal']}" if paper['journal'] else "")
+    + (f"\nAffiliations: {', '.join(paper['affiliations'])}" if paper['affiliations'] else "")
+    + "\n\nBest regards,\nPCG Team"
+)
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
             st.markdown("**To:** Forum Editors <forumeditors@corpgov.law.harvard.edu>  \n"
                         "**Cc:** Lucian Bebchuk <bebchuk@law.harvard.edu>; "
@@ -616,25 +620,31 @@ if page == "Dashboard":
                         # On Streamlit Cloud, Outlook COM integration is not available.
                         # See the Draft Email box below!
 
-                        mail.To = "forumeditors@corpgov.law.harvard.edu"
-                        mail.CC = "bebchuk@law.harvard.edu;kastiel@tauex.tau.ac.il;atoniolo@corpgov.law.harvard.edu"
-                        mail.Subject = f"Academic Option – {paper['title']}"
-                        mail.Body = (
-                            "LN is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
-                            + "\nWithin our core scope - [add description of paper topic]"
-                            + "\nForthcoming - Journal where the paper will be published."
-                            + "\nRecommend featuring / skipping - brief description"
-                            + f"\nTitle: {paper['title']}"
-                            + f"\nAuthors: {', '.join(clean_authors)}"
-                            + (f"\nJournal: {paper['journal']}" if paper['journal'] else "")
-                            + (f"\nAffiliations: {affiliations_line}" if affiliations_line else "")
-                            + "\n\n"
-                        )
-                        mail.Display()
-                        #except Exception as e:
+                        #mail.To = "forumeditors@corpgov.law.harvard.edu"
+                        #mail.CC = "bebchuk@law.harvard.edu;kastiel@tauex.tau.ac.il;atoniolo@corpgov.law.harvard.edu"
+                        #mail.Subject = f"Academic Option – {paper['title']}"
+                        #mail.Body = (
+                            #"LN is a [fast track / prominent / solid / rising/ obscure law /finance prof at a [top (5), 1st tier (6-20), 2nd tier (21 -50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] uni (school name and country if applicable), add additional authors if applicable"
+                            #+ "\nWithin our core scope - [add description of paper topic]"
+                            #+ "\nForthcoming - Journal where the paper will be published."
+                            #+ "\nRecommend featuring / skipping - brief description"
+                            #+ f"\nTitle: {paper['title']}"
+                            #+ f"\nAuthors: {', '.join(clean_authors)}"
+                            #+ (f"\nJournal: {paper['journal']}" if paper['journal'] else "")
+                            #+ (f"\nAffiliations: {affiliations_line}" if affiliations_line else "")
+                            #+ "\n\n"
+                        #)
+                        #mail.Display()
+                        #except Exception as e
                             #st.warning(f"Could not open Outlook to create draft: {e}")
+                       # Prepare email draft data for the expander at the top
                         st.session_state["show_email_draft"] = True
-                        st.session_state["draft_paper_data"] = paper
+                        st.session_state["draft_paper_data"] = {
+                            "title": paper["title"],
+                            "authors": paper.get("authors", []),
+                            "journal": paper.get("journal", ""),
+                            "affiliations": paper.get("affiliations", [])
+                        }
                         st.rerun()
                 st.markdown("---")
 
