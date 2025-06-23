@@ -551,6 +551,16 @@ if page == "Dashboard":
     with col1:
         st.header("New Papers")
         # sort session-state list into the three tiers you want
+         if st.button("Decline ALL New Papers"):
+                for paper in st.session_state["papers_to_show"]:
+                    append_declined(
+                        paper["title"],
+                        paper.get("authors", [])
+                    )
+                # wipe Column 1 for the current session
+                st.session_state["papers_to_show"] = []
+                st.success("All visible papers moved to Declined.")
+                st.rerun()
 
         def paper_is_solicitable(paper):
             for author in paper.get('authors', []):
