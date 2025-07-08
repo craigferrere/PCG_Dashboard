@@ -531,27 +531,37 @@ if page == "Dashboard":
             status_options = ["fast track", "prominent", "solid", "rising", "obscure", "exclude"]
             discipline_options = ["law", "finance"]
             
-            for name in last_names:
+            for i, name in enumerate(last_names):
                 status_key = f"status_selected_{name}"
                 field_key = f"field_selected_{name}"
+                affil_key = f"edited_affiliation_{name}"
+                confirm_key = f"confirm_affiliation_{name}"
+
+                st.markdown(f"**{name}**")
 
                 if status_key in st.session_state and field_key in st.session_state:
-                    st.markdown(
-                        f"**{name}** is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor**."
+                    original_affil = paper.get("affiliations", [])[i] if i < len(paper.get("affiliations", [])) else ""
+                    current_affil = st.session_state.get(affil_key, original_affil)
+                    new_affil = st.text_input(f"Edit affiliation for {name}", value=current_affil, key=affil_key)
+                    
+                    if st.button("Confirm Affiliation", key=confirm_key):
+                        st.session_state[affil_key] = new_affil
+                        st.success(f"Affiliation for {name} confirmed.")
+                        
+                        f"**{name}** is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state.get(affil_key, original_affil)}."
                     )
 
                 elif status_key in st.session_state:
                     st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
                     cols = st.columns(len(discipline_options))
-                    for i, field in enumerate(discipline_options):
-                        if cols[i].button(field.capitalize(), key=f"{name}_{field}"):
+                    for j, field in enumerate(discipline_options):
+                        if cols[j].button(field.capitalize(), key=f"{name}_{field}"):
                             st.session_state[field_key] = field  
                 
                 else:
-                    st.markdown(f"**{name}**")
                     cols = st.columns(len(status_options))
-                    for i, option in enumerate(status_options):
-                        if cols[i].button(option.capitalize(), key=f"{name}_{option}"):
+                    for j, option in enumerate(status_options):
+                        if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
                             st.session_state[status_key] = option    
 
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
@@ -562,8 +572,8 @@ if page == "Dashboard":
                 affiliations = paper.get("affiliations", []) 
                 
                 author_descriptions = [
-                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} {descriptor.replace('(<affiliation>)', f'({affiliation})')}"
-                    for name, affiliation in zip(last_names, affiliations)
+                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at {st.session_state.get(f'edited_affiliation_{name}', affiliation)}"
+                    for name, affiliation in zip(last_names, paper.get("affiliations", []))
                     if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]
                     and st.session_state.get(f'field_selected_{name}') is not None
                 ]
