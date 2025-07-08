@@ -538,6 +538,7 @@ if page == "Dashboard":
             </div>
         """
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
+            st.markdown(draft_body, unsafe_allow_html=True)
             st.markdown("**To:** <forumeditors@corpgov.law.harvard.edu>  \n"
                         "**Cc:** <bebchuk@law.harvard.edu>; "
                         "<kastiel@tauex.tau.ac.il>; "
