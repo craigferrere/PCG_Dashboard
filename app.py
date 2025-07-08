@@ -559,7 +559,7 @@ if page == "Dashboard":
                     "professor at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (<affiliation>)"
                 )
                 
-               affiliations = paper.get("affiliations", []) 
+                affiliations = paper.get("affiliations", []) 
                 
                 author_descriptions = [
                     f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at {descriptor}"
