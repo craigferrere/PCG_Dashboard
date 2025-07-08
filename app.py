@@ -530,14 +530,15 @@ if page == "Dashboard":
             for name in last_names:
                 key_status = f"status_{name}"
                 key_confirm = f"confirm_{name}"
+                selected_key = f"status_selected_{name}"
 
-                if f"status_selected_{name}" not in st.session_state:
+                if selected_key in st.session_state:
+                    st.markdown(f"**{name}** is marked as **{st.session_state[selected_key]}**.")
+                else:
                     selected = st.selectbox(f"{name}'s status", status_options, key=key_status)
                     if st.button(f"Confirm {name}", key=key_confirm):
-                       st.session_state[f"status_selected_{name}"] = selected
+                       st.session_state[selected_key] = selected
                        del st.session_state[key_status]
-                    else:
-                        st.markdown(f"**{name}** is marked as **{st.session_state[f'status_selected_{name}']}**.")
 
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
                 descriptor = ("law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)")
@@ -546,7 +547,7 @@ if page == "Dashboard":
                 for name in last_names
                 if st.session_state[f'status_selected_{name}'] != "exclude"
             ]
-            authors_line = ', '.join(author_descriptions)
+            authors_line = ', '.join(author_descriptions) if author_descriptions else "No valid authors were selected."
 
         draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
