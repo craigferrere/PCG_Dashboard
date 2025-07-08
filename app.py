@@ -529,6 +529,7 @@ if page == "Dashboard":
             st.markdown("### Author Statuses")
             
             for name in last_names:
+                status_key = f"status_selected_{name}"
                 selected_key = f"status_selected_{name}"
 
                 if selected_key in st.session_state:
