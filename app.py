@@ -542,7 +542,7 @@ if page == "Dashboard":
                     original_affil = paper.get("affiliations", [])[i] if i < len(paper.get("affiliations", [])) else ""
                     current_affil = st.session_state.get(affil_key, original_affil)
 
-                    st.session_state[affil_key] = st.text_input(
+                    st.text_input(
                         f"Affiliation for {name}",
                         value=current_affil,
                         key=affil_key
