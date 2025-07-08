@@ -527,12 +527,14 @@ if page == "Dashboard":
             authors_line = ""
        draft_body = f"""
            <div style="font-family: serif;">
-               <p>• {authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a 
-               [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK),
-               non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
-               <p>• Within our core scope - [add description of paper topic]</p>
-               <p>• Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
-               <p>• Recommend featuring / skipping - brief description</p>
+               <ul>
+                   <li>{authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a 
+                   [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK),
+                   non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
+                   <li>Within our core scope - [add description of paper topic]</p>
+                   <li>Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
+                   <li>Recommend featuring / skipping - brief description</p>
+                </ul>
             </div>
             """
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
