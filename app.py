@@ -595,7 +595,7 @@ if page == "Dashboard":
                         )
                 authors_line = "; ".join(author_descriptions)
                 and st.session_state.get(f'field_selected_{name}') is not None
-                ]
+
                 authors_line = (
                     "; ".join(author_descriptions) 
             )
