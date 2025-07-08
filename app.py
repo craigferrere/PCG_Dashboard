@@ -528,12 +528,10 @@ if page == "Dashboard":
         draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
            <ul style="margin: 0; padding-left: 20px;">
-               <li>{authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a 
-                   [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK),
-                   non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
-                <li>Within our core scope - [add description of paper topic]</p>
-                <li>Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
-                <li>Recommend featuring / skipping - brief description</p>
+               <li>{authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
+               <li>Within our core scope - [add description of paper topic]</p>
+               <li>Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
+               <li>Recommend featuring / skipping - brief description</p>
             </ul>
             </div>
         """
@@ -544,7 +542,6 @@ if page == "Dashboard":
                         "<atoniolo@corpgov.law.harvard.edu>")
             st.markdown(f"**Subject:** {subject}")
             st.markdown(draft_body, unsafe_allow_html=True)
-            st.code(draft_body, language="markdown")
             if st.button("Dismiss Email Draft"):
                 st.session_state["show_email_draft"] = False
                 st.session_state["draft_paper_data"] = None
