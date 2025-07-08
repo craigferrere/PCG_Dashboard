@@ -534,7 +534,7 @@ if page == "Dashboard":
             "\nRecommend featuring / skipping - brief description"
         )
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
-            st.markdown("**To:** Forum Editors <forumeditors@corpgov.law.harvard.edu>  \n"
+            st.markdown("**To:** <forumeditors@corpgov.law.harvard.edu>  \n"
                         "**Cc:** Lucian Bebchuk <bebchuk@law.harvard.edu>; "
                         "Kobi Kastiel <kastiel@tauex.tau.ac.il>; "
                         "Anna Toniolo <atoniolo@corpgov.law.harvard.edu>")
