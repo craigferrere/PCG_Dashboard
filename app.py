@@ -527,18 +527,18 @@ if page == "Dashboard":
             subject = f"Academic Option – {', '.join(last_names)} ({paper.get('title', '')})"
             
             st.markdown("### Author Statuses")
+            
             for name in last_names:
-                key_status = f"status_{name}"
-                key_confirm = f"confirm_{name}"
                 selected_key = f"status_selected_{name}"
 
                 if selected_key in st.session_state:
                     st.markdown(f"**{name}** is marked as **{st.session_state[selected_key]}**.")
                 else:
-                    selected = st.selectbox(f"{name}'s status", status_options, key=key_status)
-                    if st.button(f"Confirm {name}", key=key_confirm):
-                       st.session_state[selected_key] = selected
-                       del st.session_state[key_status]
+                    st.markdown(f"**{name}**")
+                    cols = st.columns(len(status_options))
+                    for i, option in enumerate(status_options):
+                        if cols[i].button(option.capitalize(), key=f"{name}_{option}"):
+                        st.session_state[status_key] = option    
 
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
                 descriptor = (
