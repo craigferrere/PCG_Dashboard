@@ -545,7 +545,7 @@ if page == "Dashboard":
             
             author_descriptions = [f"{name} is a {st.session_state[f'status_selected_{name}']} {descriptor}" 
                 for name in last_names
-                if st.session_state.get[f'status_selected_{name}'] != "exclude"
+                if st.session_state.get(f'status_selected_{name}') != "exclude"
             ]
             authors_line = ', '.join(author_descriptions) if author_descriptions else "No valid authors were selected."
 
