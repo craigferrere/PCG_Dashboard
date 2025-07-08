@@ -546,8 +546,8 @@ if page == "Dashboard":
                     for j, option in enumerate(status_options):
                         if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
                             st.session_state[status_key] = option
-
-               elif status == "exclude":
+                        elif status == "exclude":
+                            
                    st.markdown(f"{name} is marked as **excluded**.")
 
                 elif field is None:
