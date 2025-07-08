@@ -549,7 +549,6 @@ if page == "Dashboard":
                         st.success(f"Affiliation for {name} confirmed.")
                         
                         f"**{name}** is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state.get(affil_key, original_affil)}."
-                    )
 
                 elif status_key in st.session_state:
                     st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
