@@ -544,7 +544,7 @@ if page == "Dashboard":
                         "<atoniolo@corpgov.law.harvard.edu>")
             st.markdown(f"**Subject:** {subject}")
             st.markdown(draft_body, unsafe_allow_html=True)
-            st.code(draft_body, language="markdown
+            st.code(draft_body, language="markdown")
             if st.button("Dismiss Email Draft"):
                 st.session_state["show_email_draft"] = False
                 st.session_state["draft_paper_data"] = None
