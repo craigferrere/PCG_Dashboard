@@ -525,7 +525,7 @@ if page == "Dashboard":
         else:
             subject = f"Academic Option – {paper.get('title', '')}"
             authors_line = ""
-       draft_body = f"""
+        draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
            <ul style="margin: 0; padding-left: 20px;">
                <li>{authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a 
