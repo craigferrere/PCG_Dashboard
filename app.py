@@ -547,8 +547,7 @@ if page == "Dashboard":
                         if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
                             st.session_state[status_key] = option
                         elif status == "exclude":
-                            
-                st.markdown(f"{name} is marked as **excluded**.")
+                            st.markdown(f"{name} is marked as **excluded**.")
 
                 elif field is None:
                     st.markdown(f"{name} is marked as **{status}**. Now select discipline:")
