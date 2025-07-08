@@ -521,7 +521,7 @@ if page == "Dashboard":
         if authors:
             last_names = [a.split()[-1] for a in authors]
             subject = f"Academic Option – {', '.join(last_names)} ({paper.get('title', '')})"
-            authors_line = ', '.join(authors)
+            authors_line = ', '.join(last_names)
         else:
             subject = f"Academic Option – {paper.get('title', '')}"
             authors_line = ""
