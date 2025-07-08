@@ -527,13 +527,26 @@ if page == "Dashboard":
             subject = f"Academic Option – {', '.join(last_names)} ({paper.get('title', '')})"
             
             st.markdown("### Author Statuses")
+
+            status_options = ["fast track", "prominent", "solid", "rising", "obscure", "❌ exclude"]
+            discipline_options = ["law", "finance"]
             
             for name in last_names:
                 status_key = f"status_selected_{name}"
-                selected_key = f"status_selected_{name}"
+                field_key = f"field_selected_{name}"
 
-                if selected_key in st.session_state:
-                    st.markdown(f"**{name}** is marked as **{st.session_state[selected_key]}**.")
+                if status_key in st.session_state and field_key in st.session_state:
+                    st.markdown(
+                        f"**{name}** is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor**."
+                    )
+
+                  elif status_key in st.session_state:
+                      st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
+                      cols = st.columns(len(discipline_options))
+                      for i, field in enumerate(discipline_options):
+                          if cols[i].button(field.capitalize(), key=f"{name}_{field}"):
+                              st.session_state[field_key] = field  
+                
                 else:
                     st.markdown(f"**{name}**")
                     cols = st.columns(len(status_options))
