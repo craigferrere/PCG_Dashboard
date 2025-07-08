@@ -551,7 +551,7 @@ if page == "Dashboard":
             st.markdown(
                 f"{name} is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state[affil_key]}."
             )
-
+    
             elif status_key in st.session_state:
                 st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
                 cols = st.columns(len(discipline_options))
