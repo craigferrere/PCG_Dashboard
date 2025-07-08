@@ -535,9 +535,9 @@ if page == "Dashboard":
         )
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
             st.markdown("**To:** <forumeditors@corpgov.law.harvard.edu>  \n"
-                        "**Cc:** Lucian Bebchuk <bebchuk@law.harvard.edu>; "
-                        "Kobi Kastiel <kastiel@tauex.tau.ac.il>; "
-                        "Anna Toniolo <atoniolo@corpgov.law.harvard.edu>")
+                        "**Cc:** <bebchuk@law.harvard.edu>; "
+                        "<kastiel@tauex.tau.ac.il>; "
+                        "<atoniolo@corpgov.law.harvard.edu>")
             st.markdown(f"**Subject:** {subject}")
             st.code(draft_body, language="markdown")
             if st.button("Dismiss Email Draft"):
