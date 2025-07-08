@@ -526,15 +526,15 @@ if page == "Dashboard":
             subject = f"Academic Option – {paper.get('title', '')}"
             authors_line = ""
        draft_body = f"""
-       <div style="font-family: serif;">
-           <p>• {authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a 
-           [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK),
-           non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
-           <p>• Within our core scope - [add description of paper topic]</p>
-           <p>• Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
-           <p>• Recommend featuring / skipping - brief description</p>
-        </div>
-        """
+           <div style="font-family: serif;">
+               <p>• {authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a 
+               [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK),
+               non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
+               <p>• Within our core scope - [add description of paper topic]</p>
+               <p>• Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
+               <p>• Recommend featuring / skipping - brief description</p>
+            </div>
+            """
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
             st.markdown("**To:** <forumeditors@corpgov.law.harvard.edu>  \n"
                         "**Cc:** <bebchuk@law.harvard.edu>; "
