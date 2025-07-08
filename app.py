@@ -528,7 +528,7 @@ if page == "Dashboard":
             
             st.markdown("### Author Statuses")
 
-            status_options = ["fast track", "prominent", "solid", "rising", "obscure", "❌ exclude"]
+            status_options = ["fast track", "prominent", "solid", "rising", "obscure", "exclude"]
             discipline_options = ["law", "finance"]
             
             for name in last_names:
@@ -556,7 +556,7 @@ if page == "Dashboard":
 
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
                 descriptor = (
-                    "professor at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university ({affiliation})"
+                    "professor at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (<affiliation>)"
                 )
                 
                 author_descriptions = [
