@@ -546,7 +546,7 @@ if page == "Dashboard":
                 for name in last_names
                 if st.session_state.get(f'status_selected_{name}') != "exclude"
                                   ]
-            authors_line = ', '.join(author_descriptions) if author_descriptions else "No valid authors were selected."
+            authors_line = ', '.join(author_descriptions)
 
         draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
