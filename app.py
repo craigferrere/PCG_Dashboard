@@ -540,12 +540,12 @@ if page == "Dashboard":
                         f"**{name}** is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor**."
                     )
 
-                  elif status_key in st.session_state:
-                      st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
-                      cols = st.columns(len(discipline_options))
-                      for i, field in enumerate(discipline_options):
-                          if cols[i].button(field.capitalize(), key=f"{name}_{field}"):
-                              st.session_state[field_key] = field  
+                elif status_key in st.session_state:
+                    st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
+                    cols = st.columns(len(discipline_options))
+                    for i, field in enumerate(discipline_options):
+                        if cols[i].button(field.capitalize(), key=f"{name}_{field}"):
+                            st.session_state[field_key] = field  
                 
                 else:
                     st.markdown(f"**{name}**")
