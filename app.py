@@ -560,9 +560,10 @@ if page == "Dashboard":
                 )
                 
                 author_descriptions = [
-                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} {descriptor}"
-                    for name in last_names
+                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at {descriptor}"
+                    for name, affiliation in zip(last_names, affiliations)
                     if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]
+                    and st.session_state.get(f'field_selected_{name}') is not None
                 ]
 
                 authors_line = (
