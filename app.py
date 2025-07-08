@@ -545,7 +545,7 @@ if page == "Dashboard":
                 author_descriptions = [f"{name} is a {st.session_state.get(f'status_selected_{name}')} {descriptor}" 
                 for name in last_names
                 if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]]
-                                  ]
+                ]
             authors_line = (", ".join(author_descriptions))
 
         draft_body = f"""
