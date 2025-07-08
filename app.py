@@ -544,9 +544,9 @@ if page == "Dashboard":
                 descriptor = ("law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)")
                 author_descriptions = [f"{name} is a {st.session_state.get(f'status_selected_{name}')} {descriptor}" 
                 for name in last_names
-                if st.session_state.get(f'status_selected_{name}') != "exclude"
+                if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]]
                                   ]
-        authors_line = ', '.join(author_descriptions)
+            authors_line = (", ".join(author_descriptions))
 
         draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
