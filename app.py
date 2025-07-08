@@ -537,14 +537,14 @@ if page == "Dashboard":
             </ul>
             </div>
         """
-        with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
-            st.markdown(draft_body, unsafe_allow_html=True)
+        with st.expander("📧 Draft Email to Editors (click to view/close)", expanded=True):
             st.markdown("**To:** <forumeditors@corpgov.law.harvard.edu>  \n"
                         "**Cc:** <bebchuk@law.harvard.edu>; "
                         "<kastiel@tauex.tau.ac.il>; "
                         "<atoniolo@corpgov.law.harvard.edu>")
             st.markdown(f"**Subject:** {subject}")
-            st.code(draft_body, language="markdown")
+            st.markdown(draft_body, unsafe_allow_html=True)
+            st.code(draft_body, language="markdown
             if st.button("Dismiss Email Draft"):
                 st.session_state["show_email_draft"] = False
                 st.session_state["draft_paper_data"] = None
