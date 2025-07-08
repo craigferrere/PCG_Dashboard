@@ -589,8 +589,8 @@ if page == "Dashboard":
                 authors_line = (
                     "; ".join(author_descriptions) 
             )
-        else:
-            authors_line = ""    
+            else:
+                authors_line = ""    
 
         draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
