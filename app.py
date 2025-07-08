@@ -531,33 +531,46 @@ if page == "Dashboard":
             status_options = ["fast track", "prominent", "solid", "rising", "obscure", "exclude"]
             discipline_options = ["law", "finance", "accounting", "economics", "business"]
             
-            for i, name in enumerate(last_names):
-    status_key = f"status_selected_{name}"
-    field_key = f"field_selected_{name}"
-    affil_key = f"edited_affiliation_{name}"
-    input_key = f"input_affiliation_{name}"
+        for i, name in enumerate(last_names):
+            status_key = f"status_selected_{name}"
+            field_key = f"field_selected_{name}"
+            affil_key = f"edited_affiliation_{name}"
+            input_key = f"input_affiliation_{name}"
 
-    st.markdown(f"**{name}**")
+            st.markdown(f"**{name}**")
 
-    status = st.session_state.get(status_key)
-    field = st.session_state.get(field_key)
+            status = st.session_state.get(status_key)
+            field = st.session_state.get(field_key)
 
-    if status is None:
-        cols = st.columns(len(status_options))
-        for j, option in enumerate(status_options):
-            if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
-                st.session_state[status_key] = option
-        continue  # wait for selection before proceeding
+            if status is None:
+                cols = st.columns(len(status_options))
+                for j, option in enumerate(status_options):
+                    if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
+                        st.session_state[status_key] = option
+            continue  # wait for selection before proceeding
 
-    if status == "exclude":
-        st.markdown(f"{name} is marked as **excluded**.")
-        continue  # skip remaining input for excluded authors
+            if status == "exclude":
+                st.markdown(f"{name} is marked as **excluded**.")
+                continue  # skip remaining input for excluded authors
 
-    if field is None:
-        st.markdown(f"{name} is marked as **{status}**. Now select discipline:")
-        cols = st.columns(len(discipline_options))
-        for j, discipline in enumerate(discipline_options):
-            if cols[j].button(discipline.capitalize(), key=f"{name}
+            if field is None:
+                st.markdown(f"{name} is marked as **{status}**. Now select discipline:")
+                cols = st.columns(len(discipline_options))
+                for j, discipline in enumerate(discipline_options):
+                    if cols[j].button(discipline.capitalize(), key=f"{name}_{discipline}"):
+                        st.session_state[field_key] = discipline
+                    continue
+
+            affiliations = paper.get("affiliations", [])
+            original_affil = affiliations[i] if i < len(affiliations) else ""
+            current_affil = st.session_state.get(affil_key, original_affil)
+            st.session_state[affil_key] = st.text_input(
+                f"Affiliation for {name}", value=current_affil, key=input_key
+            )
+
+            st.markdown(
+                f"{name} is marked as **{status} {field} professor** at {st.session_state[affil_key]}."
+            )       
 
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
                 descriptor = (
