@@ -529,7 +529,7 @@ if page == "Dashboard":
             st.markdown("### Author Statuses")
 
             status_options = ["fast track", "prominent", "solid", "rising", "obscure", "exclude"]
-            discipline_options = ["law", "finance"]
+            discipline_options = ["law", "finance", "accounting", "economics", "business"]
             
             for i, name in enumerate(last_names):
                 status_key = f"status_selected_{name}"
