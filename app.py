@@ -572,19 +572,6 @@ if page == "Dashboard":
                     f"{name} is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state[affil_key]}."
                 )
 
-                elif status_key in st.session_state:
-                    st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
-                    cols = st.columns(len(discipline_options))
-                    for j, field in enumerate(discipline_options):
-                        if cols[j].button(field.capitalize(), key=f"{name}_{field}"):
-                            st.session_state[field_key] = field  
-                
-                else:
-                    cols = st.columns(len(status_options))
-                    for j, option in enumerate(status_options):
-                        if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
-                            st.session_state[status_key] = option    
-
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
                 descriptor = (
                     "professor at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (<affiliation>)"
