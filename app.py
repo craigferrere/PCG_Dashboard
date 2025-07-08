@@ -551,8 +551,8 @@ if page == "Dashboard":
                     if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]
                 ]
 
-            authors_line = (
-                "; ".join(author_descriptions) 
+                authors_line = (
+                    "; ".join(author_descriptions) 
             )
         else:
             authors_line = ""    
