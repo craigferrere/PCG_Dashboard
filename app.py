@@ -517,23 +517,41 @@ if page == "Dashboard":
     if st.session_state.get("show_email_draft") and st.session_state.get("draft_paper_data"):
         paper = st.session_state["draft_paper_data"]
         authors = paper.get("authors", [])
-        # Get last names from each author if available
+
+        status_options = ["fast track", "prominent", "solid", "rising", "obscure"]
+        authors_line = ""
+        subject = f"Academic Option – {paper.get('title', '')}"
+       
         if authors:
-            descriptor = ("is a [fast track / prominent / solid / rising / obscure law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)")
             last_names = [a.split()[-1] for a in authors]
-            author_descriptions = [f"{name} {descriptor}" for name in last_names]
             subject = f"Academic Option – {', '.join(last_names)} ({paper.get('title', '')})"
+            
+            st.markdown("### Author Statuses")
+            for name in last_names:
+                key_status = f"status_{name}"
+                key_confirm = f"confirm_{name}"
+
+                if f"status_selected_{name}" not in st.session_state:
+                    selected = st.selectbox(f"{name}'s status", status_options, key=key_status)
+                    if st.button(f"Confirm {name}", key=key_confirm):
+                       st.session_state[f"status_selected_{name}"] = selected
+                       del st.session_state[key_status]
+                    else:
+                        st.markdown(f"**{name}** is marked as **{st.session_state[f'status_selected_{name}']}**.")
+
+            if all(f"status_selected_{name}" in st.session_state for name in last_names):
+                descriptor = ("is a [fast track / prominent / solid / rising / obscure law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)")
+            
+            author_descriptions = [f"{name} is a {st.session_state[f'status_selected_{name}']} {descriptor}" for name in last_names]
             authors_line = ', '.join(author_descriptions)
-        else:
-            subject = f"Academic Option – {paper.get('title', '')}"
-            authors_line = ""
+
         draft_body = f"""
            <div style="font-family: Georgia, Times, 'Times New Roman', serif; font-size: 12px;">
            <ul style="margin: 0; padding-left: 20px;">
-               <li>{authors_line} is a [fast track / prominent / solid / rising / obscure law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)</p>
-               <li>Within our core scope - [add description of paper topic]</p>
-               <li>Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</p>
-               <li>Recommend featuring / skipping - brief description</p>
+               <li>{authors_line}</li>
+               <li>Within our core scope - [add description of paper topic]</li>
+               <li>Forthcoming - {paper.get('journal') if paper.get('journal') else '[Journal Name]'}</li>
+               <li>Recommend featuring / skipping - brief description</li>
             </ul>
             </div>
         """
