@@ -572,12 +572,34 @@ if page == "Dashboard":
                 
                 affiliations = paper.get("affiliations", []) 
                 
-                author_descriptions = [
-                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university ({st.session_state.get(f'edited_affiliation_{name}', affiliation)})"
-                    for name, affiliation in zip(last_names, paper.get("affiliations", []))
-                    if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]
+                elite_us_law = {"Harvard", "Stanford", "Yale", "Chicago", "Virginia", "Penn"}
+                author_descriptions = []
+                affiliations = paper.get("affiliations", []) 
+
+                for name in last_names:
+                    status = st.session_state.get(f"status_selected_{name}")
+                    field = st.session_state.get(f"field_selected_{name}")
+                    affil = st.session_state.get(f"edited_affiliation_{name}", "")
+                    if not affil:
+                        affil = affiliations[last_names.index(name)] if last_names.index(name) < len(affiliations) else ""
+
+                    if status and field and status != "exclude":
+                        affil_clean = affil.strip()
+                        if any(school.lower() in affil_clean.lower() for school in elite_us_law):
+                            tier_descriptor = "1st tier (6-20)"
+                        else:
+                            tier_descriptor = "2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US"
+                        
+                        author_descriptions.append(
+                            f"{name} is a {status} {field} professor at a [{tier_descriptor}] university ({affil_clean})"
+                        )
+                authors_line = "; ".join(author_descriptions)
                     and st.session_state.get(f'field_selected_{name}') is not None
                 ]
+        
+            )
+            else:
+                authors_line = ""    
 
                 authors_line = (
                     "; ".join(author_descriptions) 
