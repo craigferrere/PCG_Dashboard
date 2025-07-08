@@ -553,8 +553,6 @@ if page == "Dashboard":
 
             authors_line = (
                 "; ".join(author_descriptions) 
-                if author_descriptions 
-                else "No valid authors were selected."
             )
         else:
             authors_line = ""    
