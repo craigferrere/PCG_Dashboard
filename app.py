@@ -573,7 +573,7 @@ if page == "Dashboard":
                 affiliations = paper.get("affiliations", []) 
                 
                 author_descriptions = [
-                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at {st.session_state.get(f'edited_affiliation_{name}', affiliation)}"
+                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university ({st.session_state.get(f'edited_affiliation_{name}', affiliation)})"
                     for name, affiliation in zip(last_names, paper.get("affiliations", []))
                     if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]
                     and st.session_state.get(f'field_selected_{name}') is not None
