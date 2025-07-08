@@ -535,20 +535,22 @@ if page == "Dashboard":
                 status_key = f"status_selected_{name}"
                 field_key = f"field_selected_{name}"
                 affil_key = f"edited_affiliation_{name}"
-                confirm_key = f"confirm_affiliation_{name}"
 
                 st.markdown(f"**{name}**")
 
                 if status_key in st.session_state and field_key in st.session_state:
                     original_affil = paper.get("affiliations", [])[i] if i < len(paper.get("affiliations", [])) else ""
                     current_affil = st.session_state.get(affil_key, original_affil)
-                    new_affil = st.text_input(f"Edit affiliation for {name}", value=current_affil, key=affil_key)
-                    
-                    if st.button("Confirm Affiliation", key=confirm_key):
-                        st.session_state[affil_key] = new_affil
-                        st.success(f"Affiliation for {name} confirmed.")
-                        
-                        f"**{name}** is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state.get(affil_key, original_affil)}."
+
+                    st.session_state[affil_key] = st.text_input(
+                        f"Affiliation for {name}",
+                        value=current_affil,
+                        key=affil_key
+                    )
+
+                    st.markdown(
+                        f"{name} is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state[affil_key]}."
+                    )
 
                 elif status_key in st.session_state:
                     st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
