@@ -536,7 +536,7 @@ if page == "Dashboard":
                 <li>Recommend featuring / skipping - brief description</p>
             </ul>
             </div>
-            """
+        """
         with st.expander("📧 Draft Email to Supervisor (click to view/close)", expanded=True):
             st.markdown("**To:** <forumeditors@corpgov.law.harvard.edu>  \n"
                         "**Cc:** <bebchuk@law.harvard.edu>; "
