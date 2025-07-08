@@ -538,19 +538,40 @@ if page == "Dashboard":
 
                 st.markdown(f"**{name}**")
 
-                if status_key in st.session_state and field_key in st.session_state:
-                    original_affil = paper.get("affiliations", [])[i] if i < len(paper.get("affiliations", [])) else ""
-                    current_affil = st.session_state.get(affil_key, original_affil)
+                status = st.session_state.get(status_key)
+                field = st.session_state.get(field_key)
 
-                    st.text_input(
-                        f"Affiliation for {name}",
-                        value=current_affil,
-                        key=affil_key
-                    )
+                if status is None:
+                    cols = st.columns(len(status_options))
+                    for j, option in enumerate(status_options):
+                        if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
+                            st.session_state[status_key] = option
 
-                    st.markdown(
-                        f"{name} is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state[affil_key]}."
-                    )
+               elif status == "exclude":
+                   st.markdown(f"{name} is marked as **excluded**.")
+
+                elif field is None:
+                    st.markdown(f"{name} is marked as **{status}**. Now select discipline:")
+                    cols = st.columns(len(discipline_options))
+                    for j, discipline in enumerate(discipline_options):
+                        if cols[j].button(discipline.capitalize(), key=f"{name}_{discipline}"):
+                            st.session_state[field_key] = discipline
+
+        else:
+            affiliations = paper.get("affiliations", [])
+            original_affil = affiliations[i] if i < len(affiliations) else ""
+            if affil_key not in st.session_state:
+                st.session_state[affil_key] = original_affil
+                
+                st.text_input(
+                    f"Affiliation for {name}",
+                    value=current_affil,
+                    key=affil_key
+                )
+
+                st.markdown(
+                    f"{name} is marked as **{st.session_state[status_key]} {st.session_state[field_key]} professor** at {st.session_state[affil_key]}."
+                )
 
                 elif status_key in st.session_state:
                     st.markdown(f"**{name}** is marked as **{st.session_state[status_key]}**. Now select discipline:")
