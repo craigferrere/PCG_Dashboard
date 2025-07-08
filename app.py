@@ -519,9 +519,11 @@ if page == "Dashboard":
         authors = paper.get("authors", [])
         # Get last names from each author if available
         if authors:
+            descriptor = ("is a [fast track / prominent / solid / rising / obscure law / finance prof at a [top (5), 1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US] university (school name and country if applicable)")
             last_names = [a.split()[-1] for a in authors]
+            author_descriptions = [f"{name} {descriptor}" for name in last_names]
             subject = f"Academic Option – {', '.join(last_names)} ({paper.get('title', '')})"
-            authors_line = ', '.join(last_names)
+            authors_line = ', '.join(author_descriptions)
         else:
             subject = f"Academic Option – {paper.get('title', '')}"
             authors_line = ""
