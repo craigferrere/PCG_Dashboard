@@ -594,11 +594,7 @@ if page == "Dashboard":
                             f"{name} is a {status} {field} professor at a [{tier_descriptor}] university ({affil_clean})"
                         )
                 authors_line = "; ".join(author_descriptions)
-                and st.session_state.get(f'field_selected_{name}') is not None
-
-                authors_line = (
-                    "; ".join(author_descriptions) 
-            )
+                
             else:
                 authors_line = ""    
 
