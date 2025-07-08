@@ -562,7 +562,7 @@ if page == "Dashboard":
                 affiliations = paper.get("affiliations", []) 
                 
                 author_descriptions = [
-                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} professor at {descriptor}"
+                    f"{name} is a {st.session_state.get(f'status_selected_{name}')} {st.session_state.get(f'field_selected_{name}')} {descriptor.replace('(<affiliation>)', f'({affiliation})')}"
                     for name, affiliation in zip(last_names, affiliations)
                     if st.session_state.get(f'status_selected_{name}') not in [None, "exclude"]
                     and st.session_state.get(f'field_selected_{name}') is not None
