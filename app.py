@@ -440,17 +440,19 @@ def get_all_papers_filtered():
                         if pid in declined_set or pid in optioned_set or pid in solicited_set:
                             continue
                         new_papers.append(paper)
-            except Exception as paper_error:
-                st.warning(f"Error processing individual paper: {paper_error}")
+                    except Exception as paper_error:
+                        st.warning(f"Error processing individual paper: {paper_error}")
+                        continue
+            except Exception as email_error:
+                st.warning(f"Error extracting papers from email: {email_error}")
                 continue
-                except Exception as email_error:
-                    st.warning(f"Error extracting papers from email: {email_error}")
-                    continue
-            
-                    return deduplicate_papers(new_papers)
-                    
+
+        return deduplicate_papers(new_papers)
+
     except Exception as outer_error:
         st.error(f"Unexpected error while fetching and filtering papers: {outer_error}")
+        return []
+
         
 
 def load_solicited_papers():
