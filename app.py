@@ -557,13 +557,15 @@ if page == "Dashboard":
                 cols = st.columns(len(discipline_options))
                 for j, field in enumerate(discipline_options):
                     if cols[j].button(field.capitalize(), key=f"{name}_{field}"):
-                        st.session_state[field_key] = field  
+                        st.session_state[field_key] = field
+                        st.experimental_rerun()
 
             else:
                 cols = st.columns(len(status_options))
                 for j, option in enumerate(status_options):
                     if cols[j].button(option.capitalize(), key=f"{name}_{option}"):
                         st.session_state[status_key] = option
+                        st.experimental_rerun()
 
             if all(f"status_selected_{name}" in st.session_state for name in last_names):
                 descriptor = (
