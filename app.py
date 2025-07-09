@@ -576,6 +576,9 @@ if page == "Dashboard":
                 
                 elite_us_law = {"Harvard", "Stanford", "Yale", "Chicago", "Virginia", "Penn"}
                 elite_us_business = {"Penn", "Northwestern", "Stanford", "Chicago", "MIT"}
+                first_us_law = {"Duke", "NYU", "Michigan", "Columbia", "Northwestern", "UCLA", "Berkeley", "Georgetown", "UT Austin", "Vanderbilt", "Wash U", "Washington University", "Cornell", "UNC", "Minnesota"}
+                first_us_business = {"Tuck", "Dartmouth", "Harvard", "NYU", "Columbia", "Yale", "Berkeley", "Virginia", "Duke", "Michigan", "Cornell", "UT Austin", "Emory", "Carnegie Mellon", "UCLA", "Vanderbilt", "GIT", "Georgia Institute of Technology"}
+                
                 author_descriptions = []
                 affiliations = paper.get("affiliations", []) 
 
@@ -589,15 +592,22 @@ if page == "Dashboard":
                     if status and field and status != "exclude":
                         affil_clean = affil.strip()
 
+                        affil_lower = affil_clean.lower()
                         if field == "law":
-                            is_top = any(school.lower() in affil_clean.lower() for school in elite_us_law)
+                            if any(school.lower() in affil_lower for school in elite_us_law):
+                                tier_descriptor = "top"
+                            elif any(school.lower() in affil_lower for school in first_us_law):
+                                tier_descriptor = "1st tier"
+                            else:
+                                tier_descriptor = "[2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US]"
                         else:
-                            is_top = any(school.lower() in affil_clean.lower() for school in elite_us_business)
-                        if is_top:
-                            tier_descriptor = "top"
-                        else:
-                            tier_descriptor = "[1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US]" 
-                        
+                            if any(school.lower() in affil_lower for school in elite_us_business):
+                                tier_descriptor = "top"
+                            elif any(school.lower() in affil_lower for school in first_us_business):
+                                tier_descriptor = "1st tier"
+                            else:
+                                tier_descriptor = "[2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US]"
+                            
                         author_descriptions.append(
                             f"{name} is a {status} {field} professor at a {tier_descriptor} university ({affil_clean})"
                         )
