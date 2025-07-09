@@ -501,6 +501,10 @@ if "optioned_papers" not in st.session_state:
         if pid not in solicited_set:
             filtered_optioned_papers.append(paper)
     st.session_state["optioned_papers"] = filtered_optioned_papers
+if "manual_email_edit" not in st.session_state:
+    st.session_state["manual_email_edit"] = False
+if "manual_email_text" not in st.session_state:
+    st.session_state["manual_email_text"] = ""
 
 # ========== UI ==========
 
@@ -633,7 +637,33 @@ if page == "Dashboard":
                         "<kastiel@tauex.tau.ac.il>; "
                         "<atoniolo@corpgov.law.harvard.edu>")
             st.markdown(f"**Subject:** {subject}")
-            st.markdown(draft_body, unsafe_allow_html=True)
+
+            if not st.session_state["manual_email_edit"]:
+                st.markdown(draft_body, unsafe_allow_html=True)
+            else:
+                st.session_state["manual_email_text"] = st.text_area(
+                    "Edit Email Body",
+                    value=st.session_state["manual_email_text"] or draft_body,
+                    height=300
+                )
+            
+            col_a, col_b = st.columns([1, 1])
+            with col_a:
+                if st.button("Dismiss Email Draft"):
+                    st.session_state["show_email_draft"] = False
+                    st.session_state["draft_paper_data"] = None
+                    st.session_state["manual_email_edit"] = False
+                    st.session_state["manual_email_text"] = ""
+                    st.rerun()
+            with col_b:
+                if st.button("Edit Email Draft"):
+                    st.session_state["manual_email_edit"] = not st.session_state["manual_email_edit"]
+                    if not st.session_state["manual_email_edit"]:
+                        st.session_state["manual_email_text"] = ""
+            
+
+
+            
             if st.button("Dismiss Email Draft"):
                 st.session_state["show_email_draft"] = False
                 st.session_state["draft_paper_data"] = None
