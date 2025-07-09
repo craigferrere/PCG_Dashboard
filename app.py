@@ -308,11 +308,23 @@ def should_skip_line(line):
 
 def split_authors(authors_line):
     authors_line = authors_line.strip()
-    authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)
-    authors_line = re.sub(r'\s*,\s*and\s+', ', ', authors_line)
-    authors_line = re.sub(r'\s+and\s+', ', ', authors_line)
-    parts = [a.strip() for a in authors_line.split(',') if a.strip()]
-    return parts
+    authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)  # remove trailing numeric refs
+    authors = []
+
+    if ',' in authors_line:
+        parts = [a.strip() for a in authors_line.split(',') if a.strip()]
+        last = parts[-1]
+        if ' and ' in last:
+            and_split = [a.strip() for a in last.split(' and ') if a.strip()]
+            authors.extend(parts[:-1] + and_split)
+        else:
+            authors.extend(parts)
+    elif ' and ' in authors_line:
+        authors.extend([a.strip() for a in authors_line.split(' and ') if a.strip()])
+    else:
+        authors.append(authors_line)
+
+    return authors
 
 def split_affiliations(affil_line):
     affil_line = affil_line.strip()
