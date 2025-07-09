@@ -446,7 +446,11 @@ def get_all_papers_filtered():
                 except Exception as email_error:
                     st.warning(f"Error extracting papers from email: {email_error}")
                     continue
+            
             return deduplicate_papers(new_papers)
+         except Exception as outer_error:
+             st.error(f"Unexpected error while fetching and filtering papers: {outer_error}")
+        
 
 def load_solicited_papers():
     papers = []
