@@ -443,6 +443,9 @@ def get_all_papers_filtered():
                     except Exception as paper_error:
                         st.warning(f"Error processing individual paper: {paper_error}")
                         continue
+                except Exception as email_error:
+                    st.warning(f"Error extracting papers from email: {email_error}")
+                    continue
                     return deduplicate_papers(new_papers)
 
 def load_solicited_papers():
