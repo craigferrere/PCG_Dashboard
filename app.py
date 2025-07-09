@@ -649,14 +649,14 @@ if page == "Dashboard":
             
             col_a, col_b = st.columns([1, 1])
             with col_a:
-                if st.button("Dismiss Email Draft"):
+                if st.button("Dismiss Email Draft", key="dismiss_email_button"):
                     st.session_state["show_email_draft"] = False
                     st.session_state["draft_paper_data"] = None
                     st.session_state["manual_email_edit"] = False
                     st.session_state["manual_email_text"] = ""
                     st.rerun()
             with col_b:
-                if st.button("Edit Email Draft"):
+                if st.button("Edit Email Draft", key="edit_email_button"):
                     st.session_state["manual_email_edit"] = not st.session_state["manual_email_edit"]
                     if not st.session_state["manual_email_edit"]:
                         st.session_state["manual_email_text"] = ""
