@@ -360,37 +360,55 @@ def extract_papers_from_body(text):
             if ("forthcoming" in line.lower()) and any(c.isalpha() for c in line):
                 journal = line.strip()
                 break
-
-        authors_section = ""
-        affiliations_section = ""
-       
         posted_match = re.search(r'Posted:[^\n]*\n(.*)', segment, re.DOTALL)
+        authors_section = ""
         if posted_match:
-            full_posted_block = posted_match.group(1)
-            lines_after_posted = [l.strip() for l in full_posted_block.strip().splitlines() if l.strip()]
-            
-            if len(lines_after_posted) >= 1:
-                authors_section = remove_downloads_trailer(strip_all_hyperlinks(lines_after_posted[0]))
-            if len(lines_after_posted) >= 2:
-                affiliations_section = remove_downloads_trailer(strip_all_hyperlinks(lines_after_posted[1]))
+            authors_section = posted_match.group(1)
+            authors_section = re.split(r'Number of pages:', authors_section)[0]
+            authors_section = authors_section.strip()
+        raw_lines = [l.strip() for l in authors_section.splitlines() if l.strip()]
+        cleaned_lines = [
+            remove_downloads_trailer(strip_all_hyperlinks(l))
+            for l in raw_lines
+            if not should_skip_line(l)
+        ]
+        cleaned_lines = [l for l in cleaned_lines if l]
+        authors_list = []
+        affiliations_list = []
+        idx = 0
+        while idx < len(cleaned_lines):
+            author_line = cleaned_lines[idx]
+            authors = split_authors(author_line)
+            authors_list.extend(authors)
         
-        authors = split_authors(authors_section)
-        affils = split_affiliations(affiliations_section)
-
-        # Match lengths of authors and affiliations
-        if len(affils) < len(authors):
-            affils.extend([""] * (len(authors) - len(affils)))
-        elif len(affils) > len(authors):
-            affils = affils[:len(authors)]
-
+            affils = []
+            if idx + 1 < len(cleaned_lines):
+                affil_line = cleaned_lines[idx + 1]
+                affils = split_affiliations(affil_line)
+        
+                # Pad or trim affiliation list to match author count
+                if len(affils) < len(authors):
+                    affils.extend([""] * (len(authors) - len(affils)))
+                elif len(affils) > len(authors):
+                    affils = affils[:len(authors)]
+                affiliations_list.extend(affils)
+                idx += 2
+            else:
+                affiliations_list.extend([""] * len(authors))
+                idx += 1
         papers.append({
             'title': title,
-            'authors': authors,
-            'authors_lower': [a.lower() for a in authors],
-            'affiliations': affils,
+            'authors': authors_list,
+            'authors_lower': [a.lower() for a in authors_list],
+            'affiliations': affiliations_list,
             'journal': journal,
         })
-
+        for paper in papers:
+            if any("Enriques" in auth for auth in paper["authors"]):
+                st.write("DEBUGGING: Parsed Paper for Enriques")
+                st.write("RAW authors_section:", authors_section)
+                st.write("RAW affiliations_section:", affiliations_section)
+                st.write(paper) 
     
     return papers
 
