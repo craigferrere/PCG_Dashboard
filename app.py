@@ -641,11 +641,15 @@ if page == "Dashboard":
             if not st.session_state["manual_email_edit"]:
                 st.markdown(draft_body, unsafe_allow_html=True)
             else:
-                st.session_state["manual_email_text"] = st.text_area(
-                    "Edit Email Body",
-                    value=st.session_state["manual_email_text"] or draft_body,
-                    height=300
+                with st.form("manual_email_edit_form"):
+                    new_text = st.text_area(
+                        "Edit Email Body",
+                        value=st.session_state["manual_email_text"] or draft_body,
+                        height=300
                 )
+               submitted = st.form_submit_button("Save Changes (Ctrl+Enter)")
+               if submitted:
+                   st.session_state["manual_email_text"] = new_text
             
             col_a, col_b = st.columns([1, 1])
             with col_a:
