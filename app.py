@@ -397,12 +397,13 @@ def extract_papers_from_body(text):
             'journal': journal,
         })
         
-        for paper in papers:
-            if any("Enriques" in auth for auth in paper["authors"]):
-                st.write("DEBUGGING: Parsed Paper for Enriques")
-                st.write("RAW authors_section:", authors_section)
-                st.write("RAW affiliations_section:", affiliations_section)
-                st.write(paper) 
+        debug_this_paper = "Enriques" in authors_section or any("Enriques" in a for a in authors_list)
+        if debug_this_paper:
+            import streamlit as st
+            st.write("DEBUGGING: RAW authors_section", authors_section)
+            st.write("DEBUGGING: RAW affiliations_section", affiliations_section)
+            st.write("DEBUGGING: SPLIT AUTHORS", authors_list)
+            st.write("DEBUGGING: SPLIT AFFILS", affiliations_list)
         
     return papers
 
