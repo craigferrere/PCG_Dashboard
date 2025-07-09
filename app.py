@@ -402,24 +402,37 @@ def get_all_papers_filtered():
         emails = fetch_all_ssrn_emails()
         declined_set = read_declined_set()
         optioned_set = read_optioned_set()
-        solicited_set = read_solicited_set()  # 👈 Add this line
+        solicited_set = read_solicited_set()  
         new_papers = []
+        
         for email in emails:
-            extracted_papers = extract_papers_from_body(email["body"])
-            for paper in extracted_papers:
-                authors = paper.get("authors", [])
-                first_author = authors[0] if authors else ""
-                pid = generate_paper_id(paper["title"], first_author)
-                # Skip if already declined, optioned, or solicited
-                if pid in declined_set or pid in optioned_set or pid in solicited_set:  # 👈 Update this line
+            try:
+                extracted_papers = extract_papers_from_body(email["body"])
+                for paper in extracted_papers:
+                    try:
+                        authors = paper.get("authors", [])
+                        first_author = ""
+                        if isinstance(authors, list) and len(authors) > 0 and authors[0]:
+                            first_author = str(authors[0])
+                        title = paper.get("title", "")
+                        if not title:
+                            continue
+                        pid = generate_paper_id(paper["title"], first_author)
+                        if pid in declined_set or pid in optioned_set or pid in solicited_set:  
+                            continue
+                        new_papers.append(paper)
+                    except Exception as paper_error:
+                        st.warning(f"Error processing individual paper: {paper_error}")
+                        continue
+                except Exception as email_error:
+                    st.warning(f"Error processing email: {email_error}")
                     continue
-                new_papers.append(paper)
-        return deduplicate_papers(new_papers)
-    except Exception as e:
-        st.error(f"Error fetching SSRN emails: {e}")
-        return []
+            
+            return deduplicate_papers(new_papers)
+        except Exception as e:
+            st.error(f"Error fetching SSRN emails: {e}")
+            return []
 
-# Move the load_solicited_papers() function definition before the session state initialization
 def load_solicited_papers():
     papers = []
     if os.path.exists(solicited_filename):
