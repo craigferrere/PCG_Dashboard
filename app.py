@@ -363,7 +363,7 @@ def extract_papers_from_body(text):
         for line in lines:
             if ("forthcoming" in line.lower()) and any(c.isalpha() for c in line):
                 journal = line.strip()
-                break 
+                break
 
         # --- AUTHOR & AFFILIATION BLOCK EXTRACTION ---
         posted_match = re.search(r'Posted:[^\n]*\n', segment)
@@ -396,11 +396,7 @@ def extract_papers_from_body(text):
             'affiliations': affiliations_list,
             'journal': journal,
         })
-        
-        for i, paper in enumerate(papers[:5]):
-            st.write(f"Paper {i+1}")
-            st.write(paper)
-            st.write("----")  
+
     return papers
 
 def get_all_papers_filtered():
