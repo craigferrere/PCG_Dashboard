@@ -347,48 +347,55 @@ def split_affiliations(affil_line):
     return affiliations
 
 def extract_papers_from_body(text):
-    papers = []
-    # Find all numbered titles (e.g., "1. Title", "2. Title", ...)
     title_matches = list(re.finditer(r'^\d+\.\s+(.*)', text, re.MULTILINE))
-
+    papers = []
     for i, m in enumerate(title_matches):
         title = remove_urls(m.group(1).strip()).rstrip('<').strip()
         seg_start = m.end()
         seg_end = title_matches[i + 1].start() if i + 1 < len(title_matches) else len(text)
         segment = text[seg_start:seg_end]
-
-        # Journal extraction (same as before)
         journal = None
         lines = segment.strip().splitlines()
         for line in lines:
             if ("forthcoming" in line.lower()) and any(c.isalpha() for c in line):
                 journal = line.strip()
                 break
-
-        # --- AUTHOR & AFFILIATION BLOCK EXTRACTION ---
-        posted_match = re.search(r'Posted:[^\n]*\n', segment)
+        posted_match = re.search(r'Posted:[^\n]*\n(.*)', segment, re.DOTALL)
         authors_section = ""
-        affiliations_section = ""
-
         if posted_match:
-            rest = segment[posted_match.end():]
-            # Get non-blank lines only
-            rest_lines = [l for l in rest.splitlines() if l.strip()]
-            # Assume: first non-blank = authors, second non-blank = affiliations
-            if len(rest_lines) >= 1:
-                authors_section = rest_lines[0].strip()
-            if len(rest_lines) >= 2:
-                aff_line = rest_lines[1].strip()
-                # End affil before "Keywords:" if present
-                if "Keywords:" in aff_line:
-                    affiliations_section = aff_line.split("Keywords:")[0].strip()
-                else:
-                    affiliations_section = aff_line
-
-        # Parse out authors and affiliations
-        authors_list = split_authors(authors_section) if authors_section else []
-        affiliations_list = split_affiliations(affiliations_section) if affiliations_section else []
-
+            authors_section = posted_match.group(1)
+            authors_section = re.split(r'Number of pages:', authors_section)[0]
+            authors_section = authors_section.strip()
+        raw_lines = [l.strip() for l in authors_section.splitlines() if l.strip()]
+        cleaned_lines = [
+            remove_downloads_trailer(strip_all_hyperlinks(l))
+            for l in raw_lines
+            if not should_skip_line(l)
+        ]
+        cleaned_lines = [l for l in cleaned_lines if l]
+        authors_list = []
+        affiliations_list = []
+        idx = 0
+        while idx < len(cleaned_lines):
+            author_line = cleaned_lines[idx]
+            authors = split_authors(author_line)
+            authors_list.extend(authors)
+        
+            affils = []
+            if idx + 1 < len(cleaned_lines):
+                affil_line = cleaned_lines[idx + 1]
+                affils = split_affiliations(affil_line)
+        
+                # Pad or trim affiliation list to match author count
+                if len(affils) < len(authors):
+                    affils.extend([""] * (len(authors) - len(affils)))
+                elif len(affils) > len(authors):
+                    affils = affils[:len(authors)]
+                affiliations_list.extend(affils)
+                idx += 2
+            else:
+                affiliations_list.extend([""] * len(authors))
+                idx += 1
         papers.append({
             'title': title,
             'authors': authors_list,
@@ -396,7 +403,6 @@ def extract_papers_from_body(text):
             'affiliations': affiliations_list,
             'journal': journal,
         })
-
     return papers
 
 def get_all_papers_filtered():
@@ -430,6 +436,8 @@ def get_all_papers_filtered():
                     except Exception as paper_error:
                         st.warning(f"Error processing individual paper: {paper_error}")
                         continue
+            except Exception as email_error:
+                st.warning(f"Error processing email: {email_error}")
                 continue
                 
         return deduplicate_papers(new_papers)
