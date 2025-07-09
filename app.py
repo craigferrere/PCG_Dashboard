@@ -408,12 +408,7 @@ def extract_papers_from_body(text):
             'affiliations': affiliations_list,
             'journal': journal,
         })
-        for paper in papers:
-            if any("Enriques" in auth for auth in paper["authors"]):
-                st.write("DEBUGGING: Parsed Paper for Enriques")
-                st.write("RAW authors_section:", authors_section)
-                st.write("RAW affiliations_section:", affiliations_section)
-                st.write(paper) 
+         
     
     return papers
 
