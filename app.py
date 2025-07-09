@@ -443,11 +443,9 @@ def get_all_papers_filtered():
                     except Exception as paper_error:
                         st.warning(f"Error processing individual paper: {paper_error}")
                         continue
-            
-                
-        return deduplicate_papers(new_papers)
-    except Exception as e:
-        st.error(f"Error fetching SSRN emails: {e}")
+                    return deduplicate_papers(new_papers)
+                        except Exception as e:
+                        st.error(f"Error fetching SSRN emails: {e}")
         return []
 
 def load_solicited_papers():
