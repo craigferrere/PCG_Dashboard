@@ -355,7 +355,7 @@ def extract_papers_from_body(text):
         seg_end = title_matches[i + 1].start() if i + 1 < len(title_matches) else len(text)
         segment = text[seg_start:seg_end]
 
-        if "Enriques" in segment:
+        if "Shuangjin" in segment:
             st.write("=== FULL RAW SEGMENT ===")
             st.write(segment)
         
