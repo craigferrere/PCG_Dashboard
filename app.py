@@ -641,7 +641,7 @@ if page == "Dashboard":
             if st.session_state.get("manual_email_edit"):
                 current_text = st.session_state.get("manual_email_text") or draft_body
                 new_text = st.text_area("Edit Email Body", value=current_text, height=300, key="editable_text_area")
-                if st.button("Save and Exit Edit Mode (Ctrl+Enter)", key="save_manual_email_text"):
+                if st.button("Save and Exit", key="save_manual_email_text"):
                     st.session_state["manual_email_text"] = new_text
                     st.session_state["manual_email_edit"] = False
                     st.rerun()
