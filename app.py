@@ -396,10 +396,12 @@ def extract_papers_from_body(text):
             'affiliations': affiliations_list,
             'journal': journal,
         })
-        for i, paper in enumerate(papers[:5]):
-            st.write(f"Paper {i+1}")
-            st.write(paper)
-            st.write("----")
+
+       for paper in papers:
+           if any("Enriques" in auth for auth in paper["authors"]):
+               st.write("DEBUGGING: Parsed Paper for Enriques")
+               st.write(paper) 
+        
     return papers
 
 def get_all_papers_filtered():
