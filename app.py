@@ -369,11 +369,24 @@ def extract_papers_from_body(text):
         affiliations_list = []
         idx = 0
         while idx < len(cleaned_lines):
-            split_list = split_authors(cleaned_lines[idx])
-            authors_list.extend(split_list)
+            author_line = cleaned_lines[idx]
+            authors = split_authors(author_line)
+            authors_list.extend(authors)
+        
             if idx + 1 < len(cleaned_lines):
-                affiliations_list = split_affiliations(cleaned_lines[idx + 1])
-            idx += 2 
+                affil_line = cleaned_lines[idx + 1]
+                affils = split_affiliations(affil_line)
+        
+                # Pad or trim affiliation list to match author count
+                if len(affils) < len(authors):
+                    affils.extend([""] * (len(authors) - len(affils)))
+                elif len(affils) > len(authors):
+                    affils = affils[:len(authors)]
+            else:
+                affils = [""] * len(authors)
+        
+            affiliations_list.extend(affils)
+            idx += 2
         papers.append({
             'title': title,
             'authors': authors_list,
