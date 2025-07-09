@@ -407,7 +407,8 @@ def get_all_papers_filtered():
         for email in emails:
             extracted_papers = extract_papers_from_body(email["body"])
             for paper in extracted_papers:
-                first_author = paper["authors"][0] if paper.get("authors") else ""
+                authors = paper.get("authors", [])
+                first_author = authors[0] if authors else ""
                 pid = generate_paper_id(paper["title"], first_author)
                 # Skip if already declined, optioned, or solicited
                 if pid in declined_set or pid in optioned_set or pid in solicited_set:  # 👈 Update this line
