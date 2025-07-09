@@ -397,6 +397,10 @@ def extract_papers_from_body(text):
             'journal': journal,
         })
         
+        for i, paper in enumerate(papers[:5]):
+            st.write(f"Paper {i+1}")
+            st.write(paper)
+            st.write("----")  
     return papers
 
 def get_all_papers_filtered():
