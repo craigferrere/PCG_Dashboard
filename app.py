@@ -644,7 +644,7 @@ if page == "Dashboard":
                 with st.form("manual_email_edit_form"):
                     new_text = st.text_area(
                         "Edit Email Body",
-                        value=st.session_state["manual_email_text"] or draft_body,
+                        value=st.session_state.get["manual_email_text"] or draft_body),
                         height=300
                 )
                 submitted = st.form_submit_button("Save Changes (Ctrl+Enter)")
