@@ -444,8 +444,6 @@ def get_all_papers_filtered():
                         st.warning(f"Error processing individual paper: {paper_error}")
                         continue
                     return deduplicate_papers(new_papers)
-                   
-        return []
 
 def load_solicited_papers():
     papers = []
