@@ -424,7 +424,7 @@ def get_all_papers_filtered():
                     except Exception as paper_error:
                         st.warning(f"Error processing individual paper: {paper_error}")
                         continue
-                except Exception as email_error:
+                    except Exception as email_error:
                     st.warning(f"Error processing email: {email_error}")
                     continue
             
