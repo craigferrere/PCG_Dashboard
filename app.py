@@ -589,7 +589,7 @@ if page == "Dashboard":
                     if status and field and status != "exclude":
                         affil_clean = affil.strip()
 
-                        if field = "law":
+                        if field == "law":
                             is_top = any(school.lower() in affil_clean.lower() for school in elite_us_law)
                         else:
                             is_top = any(school.lower() in affil_clean.lower() for school in elite_us_business)
