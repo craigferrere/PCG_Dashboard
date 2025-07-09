@@ -318,6 +318,26 @@ def split_authors(authors_line):
     parts = [a.strip() for a in authors_line.split(',') if a.strip()]
     return parts
 
+def split_affiliations(affil_line):
+    affil_line = affil_line.strip()
+    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)  # remove trailing numeric refs
+    affiliations = []
+    
+    if ',' in affil_line:
+        parts = [a.strip() for a in affil_line.split(',') if a.strip()]
+        last = parts[-1]
+        if ' and ' in last:
+            and_split = [a.strip() for a in last.split(' and ') if a.strip()]
+            affiliations.extend(parts[:-1] + and_split)
+        else:
+            affiliations.extend(parts)
+    elif ' and ' in affil_line:
+        affiliations.extend([a.strip() for a in affil_line.split(' and ') if a.strip()])
+    else:
+        affiliations.append(affil_line)
+
+    return affiliations
+
 def extract_papers_from_body(text):
     title_matches = list(re.finditer(r'^\d+\.\s+(.*)', text, re.MULTILINE))
     papers = []
@@ -351,7 +371,8 @@ def extract_papers_from_body(text):
         while idx < len(cleaned_lines):
             split_list = split_authors(cleaned_lines[idx])
             authors_list.extend(split_list)
-            affiliations_list.append(cleaned_lines[idx+1] if idx+1 < len(cleaned_lines) else "")
+            if idx + 1 < len(cleaned_lines):
+                affiliations_list = split_affiliations(cleaned_lines[idx + 1])
             idx += 2 
         papers.append({
             'title': title,
