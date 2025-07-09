@@ -647,9 +647,9 @@ if page == "Dashboard":
                         value=st.session_state["manual_email_text"] or draft_body,
                         height=300
                 )
-               submitted = st.form_submit_button("Save Changes (Ctrl+Enter)")
-               if submitted:
-                   st.session_state["manual_email_text"] = new_text
+                submitted = st.form_submit_button("Save Changes (Ctrl+Enter)")
+                if submitted:
+                    st.session_state["manual_email_text"] = new_text
             
             col_a, col_b = st.columns([1, 1])
             with col_a:
