@@ -303,12 +303,8 @@ def remove_downloads_trailer(text):
     return text
 
 def should_skip_line(line):
-    return (
-        line.startswith("Keywords:") or
-        line.lower().startswith("keywords:") or
-        line.strip().startswith("Downloads") or
-        line.strip().lower().startswith("downloads")
-    )
+    l = line.strip().lower()
+    return l.startswith("keywords:") or l.startswith("downloads")
 
 def split_authors(authors_line):
     authors_line = authors_line.strip()
