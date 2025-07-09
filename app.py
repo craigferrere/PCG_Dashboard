@@ -588,7 +588,7 @@ if page == "Dashboard":
                         if any(school.lower() in affil_clean.lower() for school in elite_us_law):
                             tier_descriptor = "top"
                         else:
-                            tier_descriptor = "1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US"
+                            tier_descriptor = "[1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US]"
                         
                         author_descriptions.append(
                             f"{name} is a {status} {field} professor at a {tier_descriptor} university ({affil_clean})"
