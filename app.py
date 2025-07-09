@@ -638,14 +638,20 @@ if page == "Dashboard":
                         "<atoniolo@corpgov.law.harvard.edu>")
             st.markdown(f"**Subject:** {subject}")
 
-            if not st.session_state["manual_email_edit"]:
-                st.markdown(draft_body, unsafe_allow_html=True)
+            if not st.session_state.get("manual_email_edit"):
+                if st.session_state.get("manual_email_text"):
+                    st.markdown(st.session_state["manual_email_text"], unsafe_allow_html=True)
+                else:
+                    st.markdown(draft_body, unsafe_allow_html=True)
             else:
                 with st.form("manual_email_edit_form"):
-                    new_text = st.text_area("Edit Email Body", value=st.session_state.get("manual_email_text") or draft_body, height=300)
+                    current_text = st.session_state.get("manual_email_text") or draft_body
+                    new_text = st.text_area("Edit Email Body", value=current_text, height=300)
                     submitted = st.form_submit_button("Save Changes (Ctrl+Enter)")
                     if submitted:
                         st.session_state["manual_email_text"] = new_text
+                        st.session_state["manual_email_edit"] = True
+                        st.rerun()
             
             col_a, col_b = st.columns([1, 1])
             with col_a:
