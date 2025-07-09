@@ -397,14 +397,6 @@ def extract_papers_from_body(text):
             'journal': journal,
         })
         
-        debug_this_paper = "Enriques" in authors_section or any("Enriques" in a for a in authors_list)
-        if debug_this_paper:
-            import streamlit as st
-            st.write("DEBUGGING: RAW authors_section", authors_section)
-            st.write("DEBUGGING: RAW affiliations_section", affiliations_section)
-            st.write("DEBUGGING: SPLIT AUTHORS", authors_list)
-            st.write("DEBUGGING: SPLIT AFFILS", affiliations_list)
-        
     return papers
 
 def get_all_papers_filtered():
