@@ -603,7 +603,7 @@ if page == "Dashboard":
            <ul style="margin: 0; padding-left: 20px;">
                <li>{authors_line}</li>
                <li>Within our core scope - [add description of paper topic]</li>
-               <li>Forthcoming - {paper.get('journal') if paper.get('journal') else 'Unpublished working paper - '}</li>
+               <li>Forthcoming - {paper.get('journal') if paper.get('journal') else 'unpublished working paper - '}</li>
                <li>Recommend featuring / skipping - brief description</li>
             </ul>
             </div>
