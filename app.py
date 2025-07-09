@@ -347,6 +347,10 @@ def split_affiliations(affil_line):
     return affiliations
 
 def extract_papers_from_body(text):
+    for i, paper in enumerate(papers[:5]):
+        st.write(f"Paper {i+1}")
+        st.write(paper)
+        st.write("----")
     papers = []
     # Find all numbered titles (e.g., "1. Title", "2. Title", ...)
     title_matches = list(re.finditer(r'^\d+\.\s+(.*)', text, re.MULTILINE))
