@@ -658,7 +658,7 @@ if page == "Dashboard":
                     st.rerun()
             with col_b:
                 if st.button("Edit Email Draft", key="edit_email_button"):
-                    st.session_state["manual_email_edit"] = true
+                    st.session_state["manual_email_edit"] = True
                     st.rerun()
             
     
