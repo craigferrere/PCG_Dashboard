@@ -367,14 +367,8 @@ def extract_papers_from_body(text):
             if not should_skip_line(l)
         ]
         cleaned_lines = [l for l in cleaned_lines if l]
-        authors_list = []
-        affiliations_list = []
-        idx = 0
-        while idx < len(cleaned_lines):
-            split_list = split_authors(cleaned_lines[idx])
-            authors_list.extend(split_list)
-            affiliations_list.append(cleaned_lines[idx+1] if idx+1 < len(cleaned_lines) else "")
-            idx += 2
+        block_text = '\n'.join(cleaned_lines)
+        authors_list, affiliations_list = clean_authors_affiliations_block(block_text)
         papers.append({
             'title': title,
             'authors': authors_list,
