@@ -575,6 +575,7 @@ if page == "Dashboard":
                 affiliations = paper.get("affiliations", []) 
                 
                 elite_us_law = {"Harvard", "Stanford", "Yale", "Chicago", "Virginia", "Penn"}
+                elite_us_business = {"Penn", "Northwestern", "Stanford", "Chicago", "MIT"}
                 author_descriptions = []
                 affiliations = paper.get("affiliations", []) 
 
@@ -587,14 +588,21 @@ if page == "Dashboard":
 
                     if status and field and status != "exclude":
                         affil_clean = affil.strip()
-                        if any(school.lower() in affil_clean.lower() for school in elite_us_law):
-                            tier_descriptor = "top"
+
+                        if field = "law":
+                            is_top = any(school.lower() in affil_clean.lower() for school in elite_us_law)
                         else:
-                            tier_descriptor = "[1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US]"
+                            is_top = any(school.lower() in affil_clean.lower() for school in elite_us_business)
+
+                       if is_top:
+                           tier_descriptor = "top"
+                       else:
+                           tier_descriptor = "[1st tier (6-20), 2nd tier (21-50), 3rd tier (50 and under), unranked, European (including UK), non-US, top European (Oxford or Cambridge), top non-US]" 
                         
                         author_descriptions.append(
                             f"{name} is a {status} {field} professor at a {tier_descriptor} university ({affil_clean})"
                         )
+                    
                 authors_line = "; ".join(author_descriptions)
                 
             else:
