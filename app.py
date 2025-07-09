@@ -360,9 +360,11 @@ def extract_papers_from_body(text):
             if ("forthcoming" in line.lower()) and any(c.isalpha() for c in line):
                 journal = line.strip()
                 break
-                posted_match = re.search(r'Posted:[^\n]*\n(.*)', segment, re.DOTALL)
+
         authors_section = ""
         affiliations_section = ""
+       
+        posted_match = re.search(r'Posted:[^\n]*\n(.*)', segment, re.DOTALL)
         if posted_match:
             full_posted_block = posted_match.group(1)
             lines_after_posted = [l.strip() for l in full_posted_block.strip().splitlines() if l.strip()]
