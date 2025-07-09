@@ -310,23 +310,35 @@ def should_skip_line(line):
         line.strip().lower().startswith("downloads")
     )
 
-def split_authors(authors_line):
-    authors_line = authors_line.strip()
-    authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)
-    authors = []
-    if ',' in authors_line:
-        parts = [a.strip() for a in authors_line.split(',') if a.strip()]
-        last = parts[-1]
-        if ' and ' in last:
-            and_split = [a.strip() for a in last.split(' and ') if a.strip()]
-            authors.extend(parts[:-1] + and_split)
+def clean_authors_affiliations_block(block_text):
+    import re
+    # Strip HTML tags if present
+    block_text = re.sub(r'<[^>]+>', '', block_text)
+
+    # Extract author line
+    author_line_match = re.search(r'(?:Posted:.*\n)?([^\n]*?and[^\n]*)\n', block_text)
+    if author_line_match:
+        author_line = author_line_match.group(1)
+        authors = []
+        parts = [a.strip() for a in author_line.split(',') if a.strip()]
+        if ' and ' in parts[-1]:
+            last_parts = parts.pop().split(' and ')
+            authors.extend(parts + [p.strip() for p in last_parts])
         else:
             authors.extend(parts)
-    elif ' and ' in authors_line:
-        authors.extend([a.strip() for a in authors_line.split(' and ') if a.strip()])
     else:
-        authors.append(authors_line)
-    return authors
+        authors = []
+
+    # Extract affiliations (line after authors)
+    affil_line_match = re.search(r'\n([^@\n]+(?:University|School|Institute)[^:\n]*)\n', block_text)
+    if affil_line_match:
+        affil_line = affil_line_match.group(1).strip()
+        affiliations = [a.strip() for a in re.split(r',| and ', affil_line) if a.strip()]
+    else:
+        affiliations = []
+
+    return authors, affiliations
+
 
 def extract_papers_from_body(text):
     title_matches = list(re.finditer(r'^\d+\.\s+(.*)', text, re.MULTILINE))
