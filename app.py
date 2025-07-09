@@ -662,9 +662,11 @@ if page == "Dashboard":
                         st.session_state["manual_email_text"] = ""
             
             col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("Edit Email Draft", key="edit_email_button"):
-                    st.session_state["edit_email_mode"] = True
+
+            if not st.session_state.get("edit_email_mode"):
+                with col1:
+                    if st.button("Edit Email Draft", key="edit_email_button"):
+                        st.session_state["edit_email_mode"] = True
             with col2:
                 if st.button("Dismiss Email Draft", key="dismiss_email_button"):
                     st.session_state["show_email_draft"] = False
