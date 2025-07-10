@@ -514,7 +514,7 @@ def split_authors(authors_line):
     else:
         # No "and" — assume a single author or malformed input
     
-    return [a.strip() for a in authors_line.split(',') if a.strip()]
+        return [a.strip() for a in authors_line.split(',') if a.strip()]
 
 
 def split_affiliations(affil_line):
