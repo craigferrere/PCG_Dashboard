@@ -515,74 +515,77 @@ def split_authors(authors_line):
 
 def split_affiliations(affil_line):
     affil_line = affil_line.strip()
-    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)  # remove trailing numeric refs like (1)
-    
-    return [a.strip() for a in affil_line.split(',') if a.strip()]
+    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)  # Remove trailing numeric refs like (1)
+
+    # Handle " and " before final affiliation
+    if ' and ' in affil_line:
+        pre_and, final_affil = affil_line.rsplit(' and ', 1)
+        parts = [a.strip() for a in pre_and.split(',') if a.strip()]
+        parts.append(final_affil.strip())
+        return parts
+    else:
+        return [a.strip() for a in affil_line.split(',') if a.strip()]
 
 def extract_papers_from_body(text):
-    title_matches = list(re.finditer(r'^\d+\.\s+(.*)', text, re.MULTILINE))
+    lines = text.strip().splitlines()
     papers = []
-    for i, m in enumerate(title_matches):
-        title = remove_urls(m.group(1).strip()).rstrip('<').strip()
-        seg_start = m.end()
-        seg_end = title_matches[i + 1].start() if i + 1 < len(title_matches) else len(text)
-        segment = text[seg_start:seg_end]
+    title = None
+    journal = None
+    authors_line = None
+    affils_line = None
 
-        if "shuangjin" in segment:
-            st.write("=== FULL RAW SEGMENT ===")
-            st.write(segment)
-        
-        journal = None
-        lines = segment.strip().splitlines()
-        for line in lines:
-            if ("forthcoming" in line.lower()) and any(c.isalpha() for c in line):
-                journal = line.strip()
-                break
-        posted_match = re.search(r'Posted:[^\n]*\n(.*)', segment, re.DOTALL)
-        authors_section = ""
-        if posted_match:
-            authors_section = posted_match.group(1)
-            authors_section = re.split(r'Number of pages:', authors_section)[0]
-            authors_section = authors_section.strip()
-        raw_lines = [l.strip() for l in authors_section.splitlines() if l.strip()]
-        cleaned_lines = [
-            remove_downloads_trailer(strip_all_hyperlinks(l))
-            for l in raw_lines
-            if not should_skip_line(l)
-        ]
-        cleaned_lines = [l for l in cleaned_lines if l]
-        authors_list = []
-        affiliations_list = []
-        idx = 0
-        while idx < len(cleaned_lines):
-            author_line = cleaned_lines[idx]
-            authors = split_authors(author_line)
-            authors_list.extend(authors)
-        
-            affils = []
-            if idx + 1 < len(cleaned_lines):
-                affil_line = cleaned_lines[idx + 1]
-                affils = split_affiliations(affil_line)
-        
-                # Pad or trim affiliation list to match author count
-                if len(affils) < len(authors):
-                    affils.extend([""] * (len(authors) - len(affils)))
-                elif len(affils) > len(authors):
-                    affils = affils[:len(authors)]
-                affiliations_list.extend(affils)
-                idx += 2
-            else:
-                affiliations_list.extend([""] * len(authors))
-                idx += 1
+    for line in lines:
+        line = line.strip()
+        if line.startswith("# Title:"):
+            # Start a new paper block
+            if title and authors_line:
+                authors = split_authors(authors_line)
+                affiliations = split_affiliations(affils_line) if affils_line else [""] * len(authors)
+                if len(affiliations) < len(authors):
+                    affiliations += [""] * (len(authors) - len(affiliations))
+                elif len(affiliations) > len(authors):
+                    affiliations = affiliations[:len(authors)]
+
+                papers.append({
+                    'title': title,
+                    'authors': authors,
+                    'authors_lower': [a.lower() for a in authors],
+                    'affiliations': affiliations,
+                    'journal': journal,
+                })
+
+            # Reset all fields
+            title = line[len("# Title:"):].strip()
+            journal = None
+            authors_line = None
+            affils_line = None
+
+        elif line.startswith("# Publication:"):
+            journal = line[len("# Publication:"):].strip()
+
+        elif line.startswith("# Author:") or line.startswith("# Authors:"):
+            authors_line = line.split(":", 1)[1].strip()
+
+        elif line.startswith("# Affiliation:") or line.startswith("# Affiliations:"):
+            affils_line = line.split(":", 1)[1].strip()
+
+    # Don't forget the last paper in the loop
+    if title and authors_line:
+        authors = split_authors(authors_line)
+        affiliations = split_affiliations(affils_line) if affils_line else [""] * len(authors)
+        if len(affiliations) < len(authors):
+            affiliations += [""] * (len(authors) - len(affiliations))
+        elif len(affiliations) > len(authors):
+            affiliations = affiliations[:len(authors)]
+
         papers.append({
             'title': title,
-            'authors': authors_list,
-            'authors_lower': [a.lower() for a in authors_list],
-            'affiliations': affiliations_list,
+            'authors': authors,
+            'authors_lower': [a.lower() for a in authors],
+            'affiliations': affiliations,
             'journal': journal,
         })
-         
-    
+
     return papers
 
 def get_all_papers_filtered():
