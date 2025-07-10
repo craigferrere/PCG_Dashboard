@@ -364,10 +364,16 @@ def split_authors_affiliations(body):
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
 
+            # Tokenize what's after "and" into capitalized words
             tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
 
             if len(tokens) >= 2:
-                cutoff = f"{tokens[0]} {tokens[1]}"
+                # Check if the second token is a middle initial like "D."
+                if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+                    cutoff = f"{tokens[0]} {tokens[1]} {tokens[2]}"
+                else:
+                    cutoff = f"{tokens[0]} {tokens[1]}"
+
                 split_match = re.search(re.escape(cutoff), after_and)
                 if split_match:
                     split_point = split_match.end()
@@ -379,11 +385,13 @@ def split_authors_affiliations(body):
                         new_lines.append("# Affiliation: " + affiliations)
                     continue
 
-            new_lines.append(line)  # fallback
+            # Fallback if we can't split properly
+            new_lines.append(line)
         else:
             new_lines.append(line)
 
     return "\n".join(new_lines)
+
 
 def fetch_all_ssrn_emails():
     imap_host = "imap.gmail.com"
