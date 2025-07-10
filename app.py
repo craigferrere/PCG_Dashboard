@@ -238,18 +238,154 @@ with open('solicitable_authors.csv', newline='', encoding='utf-8') as csvfile:
         if norm:
             solicitable_author_simple.add(norm)
 
+def collapse_multiline_titles(text):
+    lines = text.split('\n')
+    collapsed = []
+    i = 0
+    while i < len(lines):
+        # Detect line like "1." or "23." — numbered title markers
+        if re.match(r"^\s*\d+\.\s*$", lines[i]):
+            i += 1
+            title_lines = []
+            # Gather next lines that are likely part of the title
+            while i < len(lines) and lines[i].strip() and not re.match(r"^(Posted:|Downloads|Number of pages:|Keywords:)", lines[i]):
+                title_lines.append(lines[i].strip())
+                i += 1
+            collapsed_title = ' '.join(title_lines).strip()
+            collapsed.append(f"# Title: {collapsed_title}")
+        else:
+            collapsed.append(lines[i])
+            i += 1
+    return '\n'.join(collapsed)
+
+def tag_author_lines(text):
+    lines = text.splitlines()
+    new_lines = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        new_lines.append(line)
+
+        if line.startswith("# Title:"):
+            j = i + 1
+            # Skip blank lines
+            while j < len(lines) and not lines[j].strip():
+                new_lines.append(lines[j])
+                j += 1
+            # Skip # Publication line if present
+            if j < len(lines) and lines[j].startswith("# Publication:"):
+                new_lines.append(lines[j])
+                j += 1
+                while j < len(lines) and not lines[j].strip():
+                    new_lines.append(lines[j])
+                    j += 1
+            # Tag first author line
+            if j < len(lines) and not lines[j].startswith("#"):
+                new_lines.append("# Authors: " + lines[j])
+                j += 1
+                # Continue with rest of the body
+                i = j - 1
+        i += 1
+
+    return "\n".join(new_lines)
+
+def flatten_author_blocks(text):
+    lines = text.splitlines()
+    new_lines = []
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+
+        if line.startswith("# Authors:"):
+            # Start collecting block
+            block = [line.replace("# Authors:", "").strip()]
+            i += 1
+            blank_seen = False
+
+            while i < len(lines):
+                current = lines[i].strip()
+
+                # Stop if we hit a new section or a second blank line
+                if current.startswith("#"):
+                    break
+                if current == "":
+                    if blank_seen:
+                        break
+                    blank_seen = True
+                    i += 1
+                    continue
+
+                block.append(current)
+                i += 1
+
+            flattened = " ".join(block).strip()
+            new_lines.append(f"# Author: {flattened}")
+        else:
+            new_lines.append(line)
+            i += 1
+
+    return "\n".join(new_lines)
+
+def split_authors_affiliations(body):
+    lines = body.splitlines()
+    new_lines = []
+    for line in lines:
+        if line.startswith("# Author:"):
+            content = line[len("# Author:"):].strip()
+
+            # Search for the first " and " — the final author delimiter
+            and_index = content.find(" and ")
+            if and_index == -1:
+                new_lines.append(line)
+                continue
+
+            # Everything before the " and " is kept
+            before_and = content[:and_index]
+            after_and = content[and_index + len(" and "):].strip()
+
+            # Tokenize what's after "and" into capitalized words
+            tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
+
+            # Take first 2 tokens after "and"
+            if len(tokens) >= 2:
+                cutoff = f"{tokens[0]} {tokens[1]}"
+                final_author_pattern = re.escape(cutoff)
+                split_match = re.search(final_author_pattern, after_and)
+                if split_match:
+                    split_point = split_match.end()
+                    final_author = after_and[:split_point].strip()
+                    affiliations = after_and[split_point:].strip()
+
+                    author_line = "# Author: " + before_and.strip() + " and " + final_author
+                    new_lines.append(author_line)
+                    if affiliations:
+                        new_lines.append("# Affiliation: " + affiliations)
+                    continue
+
+            # Fallback if we can't split properly
+            new_lines.append(line)
+        else:
+            new_lines.append(line)
+    return '\n'.join(new_lines)
+
 def fetch_all_ssrn_emails():
     imap_host = "imap.gmail.com"
     username = "PCGssrn@gmail.com"
-    app_password = "lbcf ioir uuoy wqui"
+    app_password = "lbcf ioir uuoy wqui"  # GMAIL PASSWORD
 
+    print("Connecting to Gmail...")
     mail = imaplib.IMAP4_SSL(imap_host)
     mail.login(username, app_password)
+    print("Login successful.")
 
-    mail.select("INBOX")  # Select the mailbox you want to use
-
-    # Fetch ALL emails (or adjust search filter for SSRN)
+    mail.select("INBOX")
     status, message_numbers = mail.search(None, "ALL")
+
+    if status != "OK":
+        print("No emails found.")
+        mail.logout()
+        return []
 
     emails = []
     for num in message_numbers[0].split():
@@ -257,17 +393,76 @@ def fetch_all_ssrn_emails():
         for response_part in msg_data:
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
-                subject = msg["subject"]
+                body = ""
+
                 if msg.is_multipart():
-                    body = ""
                     for part in msg.walk():
-                        if part.get_content_type() == "text/plain" and part.get('Content-Disposition') is None:
-                            body += part.get_payload(decode=True).decode(errors="ignore")
+                        if part.get_content_type() == "text/plain" and part.get("Content-Disposition") is None:
+                            charset = part.get_content_charset() or "utf-8"
+                            body += part.get_payload(decode=True).decode(charset, errors="ignore")
                 else:
-                    body = msg.get_payload(decode=True).decode(errors="ignore")
-                emails.append({"subject": subject, "body": body})
+                    charset = msg.get_content_charset() or "utf-8"
+                    body = msg.get_payload(decode=True).decode(charset, errors="ignore")
+
+                body = re.sub(r"<[^>]+>", "", body)
+                body = re.sub(
+                    r"^Number of pages: \d+\s+Posted: \d{1,2} [A-Z][a-z]{2} 202\d(?:\s+Last Revised: \d{1,2} [A-Z][a-z]{2} 202\d)?\s*$",
+                    "",
+                    body,
+                    flags=re.MULTILINE
+                )
+                body = re.sub(r"^Posted: \d{1,2} [A-Z][a-z]{2} 202\d\s*$", "", body, flags=re.MULTILINE)
+                body = re.sub(r"^Downloads\d+\s*$", "", body, flags=re.MULTILINE)
+                body = re.sub(
+                    r"^(Fiduciary|Shareholder|Hedge Funds|Mutual Funds|ESG|Institutional Investors|Corporate|Stakeholder|Merger|Directors|Compensation|Securities|SPAC|Proxy Advisors)\s*$",
+                    "",
+                    body,
+                    flags=re.MULTILINE
+                )
+                body = re.sub(
+                    r"^Keywords:.*\n(?:^[^\S\r\n]*\S.*\n)?",
+                    "",
+                    body,
+                    flags=re.MULTILINE
+                )
+                body = collapse_multiline_titles(body)
+                body = body.replace("*affiliation not provided to SSRN*", "No affiliation")
+                body = re.sub(r"\*affiliation\s+(?:not\s+provided\s+to\s+SSRN)\*", "No affiliation", body, flags=re.IGNORECASE)
+                body = re.sub(r"^Body preview:\s*$", "", body, flags=re.MULTILINE)
+
+
+                body = re.sub(
+                    r"\*(.*?)\n(.*?)\*\s*",  # Two-line version
+                    lambda m: f"# Publication: {m.group(1).strip()} {m.group(2).strip()}\n\n",
+                    body
+                )
+                body = re.sub(
+                    r"\*(.*?)\*\s*",  # Single-line version
+                    lambda m: f"# Publication: {m.group(1).strip()}\n\n",
+                    body
+                )
+
+                body = re.sub(
+                    r"(#\.\n)([^\n]*\n)(# Publication:)",
+                    r"\1\3",
+                    body
+                )
+
+                body = re.sub(r"\[image: Multiple version icon\]There are \d+ versions of this paper", "", body)
+
+                body = re.sub(r'(\n\s*){2,}', '\n\n', body)
+
+                body = tag_author_lines(body)
+                body = flatten_author_blocks(body)
+                body = split_authors_affiliations(body)
+
+                emails.append({
+                    "body": body.strip()
+                })
+
 
     mail.logout()
+    print(f"Fetched {len(emails)} emails.")
     return emails
 
 def deduplicate_papers(papers):
