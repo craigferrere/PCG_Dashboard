@@ -330,56 +330,60 @@ def flatten_author_blocks(text):
 def split_authors_affiliations(body):
     lines = body.splitlines()
     new_lines = []
+
+    # Common affiliation indicators
+    affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
+
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
 
-            if ' and ' not in content:
+            # Handle sole author cases with affiliation leakage
+            if ' and ' not in content and ',' not in content:
                 tokens = content.split()
-                # Try to split after the third capitalized word (Firstname Middlename Lastname)
-                cap_tokens = [t for t in tokens if t and t[0].isupper()]
-                if len(cap_tokens) >= 3:
-                    name = " ".join(tokens[:3])
-                    affiliation = " ".join(tokens[3:])
-                    new_lines.append("# Author: " + name)
-                    if affiliation:
-                        new_lines.append("# Affiliation: " + affiliation)
-                    continue  # done with this line
-            
-            # Search for the first " and " — the final author delimiter
+                if len(tokens) >= 4:
+                    for i in range(2, min(5, len(tokens))):
+                        name = " ".join(tokens[:i])
+                        remainder = " ".join(tokens[i:])
+                        if any(word in affiliation_keywords for word in remainder.split()):
+                            new_lines.append("# Author: " + name)
+                            new_lines.append("# Affiliation: " + remainder)
+                            break
+                    else:
+                        new_lines.append(line)  # couldn't confidently split
+                else:
+                    new_lines.append(line)
+                continue
+
+            # Handle multiple authors
             and_index = content.find(" and ")
             if and_index == -1:
                 new_lines.append(line)
                 continue
 
-            # Everything before the " and " is kept
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
 
-            # Tokenize what's after "and" into capitalized words
             tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
 
-            # Take first 2 tokens after "and"
             if len(tokens) >= 2:
                 cutoff = f"{tokens[0]} {tokens[1]}"
-                final_author_pattern = re.escape(cutoff)
-                split_match = re.search(final_author_pattern, after_and)
+                split_match = re.search(re.escape(cutoff), after_and)
                 if split_match:
                     split_point = split_match.end()
                     final_author = after_and[:split_point].strip()
                     affiliations = after_and[split_point:].strip()
 
-                    author_line = "# Author: " + before_and.strip() + " and " + final_author
-                    new_lines.append(author_line)
+                    new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
                     if affiliations:
                         new_lines.append("# Affiliation: " + affiliations)
                     continue
 
-            # Fallback if we can't split properly
-            new_lines.append(line)
+            new_lines.append(line)  # fallback
         else:
             new_lines.append(line)
-    return '\n'.join(new_lines)
+
+    return "\n".join(new_lines)
 
 def fetch_all_ssrn_emails():
     imap_host = "imap.gmail.com"
