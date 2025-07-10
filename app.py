@@ -735,17 +735,18 @@ def remove_solicited(title, author_list):
 
 # ========== SESSION STATE INITIALIZATION ==========
 
+if "declined_set" not in st.session_state:
+    st.session_state["declined_set"] = read_declined_set()
+if "optioned_set" not in st.session_state:
+    st.session_state["optioned_set"] = read_optioned_set()
+if "solicited_set" not in st.session_state:
+    st.session_state["solicited_set"] = read_solicited_set()
+
 if "papers_to_show" not in st.session_state:
     st.session_state["papers_to_show"] = get_all_papers_filtered()
-if "solicited_papers" not in st.session_state:
-    st.session_state["solicited_papers"] = load_solicited_papers()
-if "show_email_draft" not in st.session_state:
-    st.session_state["show_email_draft"] = False
-if "draft_paper_data" not in st.session_state:
-    st.session_state["draft_paper_data"] = None
-solicited_set = read_solicited_set()
+
 if "optioned_papers" not in st.session_state:
-    solicited_set = read_solicited_set()
+    solicited_set = st.session_state["solicited_set"]
     optioned_papers = load_optioned_papers()
     filtered_optioned_papers = []
     for paper in optioned_papers:
@@ -753,6 +754,14 @@ if "optioned_papers" not in st.session_state:
         if pid not in solicited_set:
             filtered_optioned_papers.append(paper)
     st.session_state["optioned_papers"] = filtered_optioned_papers
+
+if "solicited_papers" not in st.session_state:
+    st.session_state["solicited_papers"] = load_solicited_papers()
+
+if "show_email_draft" not in st.session_state:
+    st.session_state["show_email_draft"] = False
+if "draft_paper_data" not in st.session_state:
+    st.session_state["draft_paper_data"] = None
 if "manual_email_edit" not in st.session_state:
     st.session_state["manual_email_edit"] = False
 if "manual_email_text" not in st.session_state:
