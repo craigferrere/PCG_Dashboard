@@ -334,6 +334,18 @@ def split_authors_affiliations(body):
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
 
+            if ' and ' not in content:
+                tokens = content.split()
+                # Try to split after the third capitalized word (Firstname Middlename Lastname)
+                cap_tokens = [t for t in tokens if t and t[0].isupper()]
+                if len(cap_tokens) >= 3:
+                    name = " ".join(tokens[:3])
+                    affiliation = " ".join(tokens[3:])
+                    new_lines.append("# Author: " + name)
+                    if affiliation:
+                        new_lines.append("# Affiliation: " + affiliation)
+                    continue  # done with this line
+            
             # Search for the first " and " — the final author delimiter
             and_index = content.find(" and ")
             if and_index == -1:
