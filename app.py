@@ -497,10 +497,6 @@ def remove_downloads_trailer(text):
     text = re.sub(r'(?:,|\band\b)?\s*\d+\s*$', '', text).strip()
     return text
 
-def should_skip_line(line):
-    l = line.strip().lower()
-    return l.startswith("keywords:") or l.startswith("downloads")
-
 def split_authors(authors_line):
     authors_line = authors_line.strip()
     authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)  # remove trailing numeric refs like (1)
@@ -519,23 +515,9 @@ def split_authors(authors_line):
 
 def split_affiliations(affil_line):
     affil_line = affil_line.strip()
-    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)  # remove trailing numeric refs
-    affiliations = []
+    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)  # remove trailing numeric refs like (1)
     
-    if ',' in affil_line:
-        parts = [a.strip() for a in affil_line.split(',') if a.strip()]
-        last = parts[-1]
-        if ' and ' in last:
-            and_split = [a.strip() for a in last.split(' and ') if a.strip()]
-            affiliations.extend(parts[:-1] + and_split)
-        else:
-            affiliations.extend(parts)
-    elif ' and ' in affil_line:
-        affiliations.extend([a.strip() for a in affil_line.split(' and ') if a.strip()])
-    else:
-        affiliations.append(affil_line)
-
-    return affiliations
+    return [a.strip() for a in affil_line.split(',') if a.strip()]
 
 def extract_papers_from_body(text):
     title_matches = list(re.finditer(r'^\d+\.\s+(.*)', text, re.MULTILINE))
