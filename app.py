@@ -385,23 +385,6 @@ def split_authors_affiliations(body):
 
     return "\n".join(new_lines)
 
-def split_and_comma_list(line):
-    # Split on commas, then split the last element on ' and '
-    if not line:
-        return []
-    parts = [p.strip() for p in line.split(',') if p.strip()]
-    if parts and ' and ' in parts[-1]:
-        before_and, after_and = parts[-1].rsplit(' and ', 1)
-        before_and = before_and.strip()
-        after_and = after_and.strip()
-        new_parts = []
-        if before_and:
-            new_parts.append(before_and)
-        if after_and:
-            new_parts.append(after_and)
-        parts = parts[:-1] + new_parts
-    return parts
-
 def extract_papers_from_body(text):
     lines = text.strip().splitlines()
     papers = []
