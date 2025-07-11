@@ -387,20 +387,33 @@ def split_and_comma_list(line):
     # Split on commas, then split the last element on ' and '
     if not line:
         return []
+    
+    # Add debug output
+    if "debug_author_splitting" in st.session_state:
+        st.session_state["debug_author_splitting"].append(f"split_and_comma_list input: '{line}'")
+    
     parts = [p.strip() for p in line.split(',') if p.strip()]
     if parts and ' and ' in parts[-1]:
         before_and, after_and = parts[-1].rsplit(' and ', 1)
         before_and = before_and.strip()
         after_and = after_and.strip()
         
+        # Add debug output
+        if "debug_author_splitting" in st.session_state:
+            st.session_state["debug_author_splitting"].append(f"split_and_comma_list: before_and='{before_and}' after_and='{after_and}'")
+        
         # Handle middle initials in the last author
         tokens = after_and.split()
         if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
             # Middle initial case: take exactly 3 tokens for last author
             last_author = ' '.join(tokens[:3])
+            if "debug_author_splitting" in st.session_state:
+                st.session_state["debug_author_splitting"].append(f"split_and_comma_list: MIDDLE INITIAL detected, last_author='{last_author}'")
         else:
             # No middle initial: take first 2 tokens for last author
             last_author = ' '.join(tokens[:2]) if len(tokens) >= 2 else after_and
+            if "debug_author_splitting" in st.session_state:
+                st.session_state["debug_author_splitting"].append(f"split_and_comma_list: no middle initial, last_author='{last_author}'")
         
         new_parts = []
         if before_and:
@@ -408,6 +421,10 @@ def split_and_comma_list(line):
         if last_author:
             new_parts.append(last_author)
         parts = parts[:-1] + new_parts
+    
+    if "debug_author_splitting" in st.session_state:
+        st.session_state["debug_author_splitting"].append(f"split_and_comma_list output: {parts}")
+    
     return parts
 
 def extract_papers_from_body(text):
@@ -417,10 +434,17 @@ def extract_papers_from_body(text):
     journal = None
     authors_line = None
     affils_line = None
+    
+    # Add debug output
+    if "debug_author_splitting" in st.session_state:
+        st.session_state["debug_author_splitting"].append("=== extract_papers_from_body ===")
+    
     for line in lines:
         line = line.strip()
         if line.startswith("# Title:"):
             if title and authors_line:
+                if "debug_author_splitting" in st.session_state:
+                    st.session_state["debug_author_splitting"].append(f"Processing paper: title='{title}' authors_line='{authors_line}'")
                 authors = split_and_comma_list(authors_line)
                 affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
                 if len(affiliations) < len(authors):
@@ -442,9 +466,15 @@ def extract_papers_from_body(text):
             journal = line[len("# Publication:"):].strip()
         elif line.startswith("# Author:") or line.startswith("# Authors:"):
             authors_line = line.split(":", 1)[1].strip()
+            if "debug_author_splitting" in st.session_state:
+                st.session_state["debug_author_splitting"].append(f"Found author line: '{authors_line}'")
         elif line.startswith("# Affiliation:") or line.startswith("# Affiliations:"):
             affils_line = line.split(":", 1)[1].strip()
+            if "debug_author_splitting" in st.session_state:
+                st.session_state["debug_author_splitting"].append(f"Found affiliation line: '{affils_line}'")
     if title and authors_line:
+        if "debug_author_splitting" in st.session_state:
+            st.session_state["debug_author_splitting"].append(f"Processing final paper: title='{title}' authors_line='{authors_line}'")
         authors = split_and_comma_list(authors_line)
         affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
         if len(affiliations) < len(authors):
