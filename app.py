@@ -179,55 +179,6 @@ def process_and_store_new_papers():
             paper_id = generate_paper_id(paper['title'], first_author)
             if paper_id not in existing_ids:
                 add_paper_to_master(paper, 'new')
-
-# ========== IMPROVED AUTHOR/AFFILIATION SPLITTING ==========
-
-def split_authors(authors_line):
-    authors_line = authors_line.strip()
-    if ' and ' in authors_line:
-        pre_and, after_and = authors_line.rsplit(' and ', 1)
-        tokens = after_and.split()
-        # If the second token is a letter and period, last author is next three tokens
-        
-        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-            # Middle initial detected, use 3 tokens
-            cutoff = 3
-        else:
-            cutoff = 2
-        
-        last_author = ' '.join(tokens[:cutoff])
-        rest = tokens[cutoff:]
-        
-        # Left side: split by comma for previous authors
-        authors = [a.strip() for a in pre_and.split(',') if a.strip()]
-        authors.append(last_author.strip())
-        return authors
-    else:
-        return [a.strip() for a in authors_line.split(',') if a.strip()]
-
-def split_affiliations(authors_line, affil_line):
-    # Find the last author in the authors_line
-    if ' and ' in authors_line:
-        pre_and, after_and = authors_line.rsplit(' and ', 1)
-        tokens = after_and.split()
-
-        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-            cutoff = 3
-        else:
-            cutoff = 2
-
-        last_author = ' '.join(tokens[:cutoff])
-        rest = tokens[cutoff:]
-
-        # The affiliation is everything after the last author and before the next comma
-        affil_text = ' '.join(rest) + ' ' + affil_line if affil_line else ' '.join(rest)
-        affil_text = affil_text.strip()
-
-        # Split affiliations by comma
-        affiliations = [a.strip() for a in affil_text.split(',') if a.strip()]
-        return affiliations
-    else:
-        return [a.strip() for a in affil_line.split(',') if a.strip()] if affil_line else []
         
 def deduplicate_papers(papers):
     seen = set()
