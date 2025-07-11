@@ -396,8 +396,8 @@ def extract_papers_from_body(text):
         line = line.strip()
         if line.startswith("# Title:"):
             if title and authors_line:
-                authors = split_and_comma_list(authors_line)
-                affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
+                authors = authors_line
+                affiliations = affils_line if affils_line else [""] * len(authors)
                 if len(affiliations) < len(authors):
                     affiliations += [""] * (len(authors) - len(affiliations))
                 elif len(affiliations) > len(authors):
