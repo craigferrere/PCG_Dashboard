@@ -189,6 +189,138 @@ def save_processed_email_id(email_id):
 
 # ========== IMPROVED AUTHOR/AFFILIATION SPLITTING ==========
 
+def split_authors(authors_line):
+    authors_line = authors_line.strip()
+    if ' and ' in authors_line:
+        pre_and, after_and = authors_line.rsplit(' and ', 1)
+        tokens = after_and.split()
+        # If the second token is a letter and period, last author is next three tokens
+        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+            last_author = ' '.join(tokens[:3])
+            rest = tokens[3:]
+        else:
+            last_author = ' '.join(tokens[:2])
+            rest = tokens[2:]
+        # Left side: split by comma for previous authors
+        authors = [a.strip() for a in pre_and.split(',') if a.strip()]
+        authors.append(last_author.strip())
+        return authors
+    else:
+        return [a.strip() for a in authors_line.split(',') if a.strip()]
+
+def split_affiliations(authors_line, affil_line):
+    # Find the last author in the authors_line
+    if ' and ' in authors_line:
+        pre_and, after_and = authors_line.rsplit(' and ', 1)
+        tokens = after_and.split()
+        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+            last_author = ' '.join(tokens[:3])
+            rest = tokens[3:]
+        else:
+            last_author = ' '.join(tokens[:2])
+            rest = tokens[2:]
+        # The affiliation is everything after the last author and before the next comma
+        affil_text = ' '.join(rest) + ' ' + affil_line if affil_line else ' '.join(rest)
+        affil_text = affil_text.strip()
+        # Split affiliations by comma
+        affiliations = [a.strip() for a in affil_text.split(',') if a.strip()]
+        return affiliations
+    else:
+        return [a.strip() for a in affil_line.split(',') if a.strip()] if affil_line else []
+
+def deduplicate_papers(papers):
+    seen = set()
+    unique = []
+    for paper in papers:
+        key = (
+            normalize_title(paper['title']),
+            normalize_simple_firstlast(paper['authors'][0]) if paper.get('authors') else ""
+        )
+        if key not in seen:
+            seen.add(key)
+            unique.append(paper)
+    return unique
+
+# ========== LEGACY FUNCTIONS (keeping for compatibility) ==========
+
+def collapse_multiline_titles(text):
+    lines = text.split('\n')
+    collapsed = []
+    i = 0
+    while i < len(lines):
+        if re.match(r"^\s*\d+\.\s*$", lines[i]):
+            i += 1
+            title_lines = []
+            while i < len(lines) and lines[i].strip() and not re.match(r"^(Posted:|Downloads|Number of pages:|Keywords:)", lines[i]):
+                title_lines.append(lines[i].strip())
+                i += 1
+            collapsed_title = ' '.join(title_lines).strip()
+            collapsed.append(f"# Title: {collapsed_title}")
+        else:
+            collapsed.append(lines[i])
+            i += 1
+    return '\n'.join(collapsed)
+
+def tag_author_lines(text):
+    lines = text.splitlines()
+    new_lines = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        new_lines.append(line)
+
+        if line.startswith("# Title:"):
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                new_lines.append(lines[j])
+                j += 1
+            if j < len(lines) and lines[j].startswith("# Publication:"):
+                new_lines.append(lines[j])
+                j += 1
+                while j < len(lines) and not lines[j].strip():
+                    new_lines.append(lines[j])
+                    j += 1
+            if j < len(lines) and not lines[j].startswith("#"):
+                new_lines.append("# Authors: " + lines[j])
+                j += 1
+                i = j - 1
+        i += 1
+    return "\n".join(new_lines)
+
+def flatten_author_blocks(text):
+    lines = text.splitlines()
+    new_lines = []
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+
+        if line.startswith("# Authors:"):
+            block = [line.replace("# Authors:", "").strip()]
+            i += 1
+            blank_seen = False
+
+            while i < len(lines):
+                current = lines[i].strip()
+                if current.startswith("#"):
+                    break
+                if current == "":
+                    if blank_seen:
+                        break
+                    blank_seen = True
+                    i += 1
+                    continue
+                block.append(current)
+                i += 1
+
+            flattened = " ".join(block).strip()
+            new_lines.append(f"# Author: {flattened}")
+        else:
+            new_lines.append(line)
+            i += 1
+
+    return "\n".join(new_lines)
+
 def split_authors_affiliations(body):
     lines = body.splitlines()
     new_lines = []
@@ -237,27 +369,22 @@ def split_authors_affiliations(body):
             new_lines.append(line)
     return "\n".join(new_lines)
 
-def split_authors(authors_line):
-    authors_line = authors_line.strip()
-    authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)
-    if ' and ' in authors_line:
-        pre_and, final_author = authors_line.rsplit(' and ', 1)
-        authors = [a.strip() for a in pre_and.split(',') if a.strip()]
-        authors.append(final_author.strip())
-        return authors
-    else:
-        return [a.strip() for a in authors_line.split(',') if a.strip()]
-
-def split_affiliations(affil_line):
-    affil_line = affil_line.strip()
-    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)
-    if ' and ' in affil_line:
-        pre_and, final_affil = affil_line.rsplit(' and ', 1)
-        parts = [a.strip() for a in pre_and.split(',') if a.strip()]
-        parts.append(final_affil.strip())
-        return parts
-    else:
-        return [a.strip() for a in affil_line.split(',') if a.strip()]
+def split_and_comma_list(line):
+    # Split on commas, then split the last element on ' and '
+    if not line:
+        return []
+    parts = [p.strip() for p in line.split(',') if p.strip()]
+    if parts and ' and ' in parts[-1]:
+        before_and, after_and = parts[-1].rsplit(' and ', 1)
+        before_and = before_and.strip()
+        after_and = after_and.strip()
+        new_parts = []
+        if before_and:
+            new_parts.append(before_and)
+        if after_and:
+            new_parts.append(after_and)
+        parts = parts[:-1] + new_parts
+    return parts
 
 def extract_papers_from_body(text):
     lines = text.strip().splitlines()
@@ -270,8 +397,8 @@ def extract_papers_from_body(text):
         line = line.strip()
         if line.startswith("# Title:"):
             if title and authors_line:
-                authors = split_authors(authors_line)
-                affiliations = split_affiliations(affils_line) if affils_line else [""] * len(authors)
+                authors = split_and_comma_list(authors_line)
+                affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
                 if len(affiliations) < len(authors):
                     affiliations += [""] * (len(authors) - len(affiliations))
                 elif len(affiliations) > len(authors):
@@ -294,8 +421,8 @@ def extract_papers_from_body(text):
         elif line.startswith("# Affiliation:") or line.startswith("# Affiliations:"):
             affils_line = line.split(":", 1)[1].strip()
     if title and authors_line:
-        authors = split_authors(authors_line)
-        affiliations = split_affiliations(affils_line) if affils_line else [""] * len(authors)
+        authors = split_and_comma_list(authors_line)
+        affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
         if len(affiliations) < len(authors):
             affiliations += [""] * (len(authors) - len(affiliations))
         elif len(affiliations) > len(authors):
@@ -437,99 +564,6 @@ def clean_email_body(body):
     body = split_authors_affiliations(body)
     
     return body
-
-# ========== LEGACY FUNCTIONS (keeping for compatibility) ==========
-
-def collapse_multiline_titles(text):
-    lines = text.split('\n')
-    collapsed = []
-    i = 0
-    while i < len(lines):
-        if re.match(r"^\s*\d+\.\s*$", lines[i]):
-            i += 1
-            title_lines = []
-            while i < len(lines) and lines[i].strip() and not re.match(r"^(Posted:|Downloads|Number of pages:|Keywords:)", lines[i]):
-                title_lines.append(lines[i].strip())
-                i += 1
-            collapsed_title = ' '.join(title_lines).strip()
-            collapsed.append(f"# Title: {collapsed_title}")
-        else:
-            collapsed.append(lines[i])
-            i += 1
-    return '\n'.join(collapsed)
-
-def tag_author_lines(text):
-    lines = text.splitlines()
-    new_lines = []
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        new_lines.append(line)
-
-        if line.startswith("# Title:"):
-            j = i + 1
-            while j < len(lines) and not lines[j].strip():
-                new_lines.append(lines[j])
-                j += 1
-            if j < len(lines) and lines[j].startswith("# Publication:"):
-                new_lines.append(lines[j])
-                j += 1
-                while j < len(lines) and not lines[j].strip():
-                    new_lines.append(lines[j])
-                    j += 1
-            if j < len(lines) and not lines[j].startswith("#"):
-                new_lines.append("# Authors: " + lines[j])
-                j += 1
-                i = j - 1
-        i += 1
-    return "\n".join(new_lines)
-
-def flatten_author_blocks(text):
-    lines = text.splitlines()
-    new_lines = []
-    i = 0
-
-    while i < len(lines):
-        line = lines[i]
-
-        if line.startswith("# Authors:"):
-            block = [line.replace("# Authors:", "").strip()]
-            i += 1
-            blank_seen = False
-
-            while i < len(lines):
-                current = lines[i].strip()
-                if current.startswith("#"):
-                    break
-                if current == "":
-                    if blank_seen:
-                        break
-                    blank_seen = True
-                    i += 1
-                    continue
-                block.append(current)
-                i += 1
-
-            flattened = " ".join(block).strip()
-            new_lines.append(f"# Author: {flattened}")
-        else:
-            new_lines.append(line)
-            i += 1
-
-    return "\n".join(new_lines)
-
-def deduplicate_papers(papers):
-    seen = set()
-    unique = []
-    for paper in papers:
-        key = (
-            normalize_title(paper['title']),
-            normalize_simple_firstlast(paper['authors'][0]) if paper.get('authors') else ""
-        )
-        if key not in seen:
-            seen.add(key)
-            unique.append(paper)
-    return unique
 
 # ========== MAIN DATA LOADING ==========
 
