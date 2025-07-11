@@ -210,21 +210,25 @@ def split_affiliations(authors_line, affil_line):
     if ' and ' in authors_line:
         pre_and, after_and = authors_line.rsplit(' and ', 1)
         tokens = after_and.split()
-    if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-        cutoff = 3
-    else:
-        cutoff = 2
-    last_author = ' '.join(tokens[:cutoff])
-    rest = tokens[cutoff:]
+
+        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+            cutoff = 3
+        else:
+            cutoff = 2
+
+        last_author = ' '.join(tokens[:cutoff])
+        rest = tokens[cutoff:]
+
         # The affiliation is everything after the last author and before the next comma
         affil_text = ' '.join(rest) + ' ' + affil_line if affil_line else ' '.join(rest)
         affil_text = affil_text.strip()
+
         # Split affiliations by comma
         affiliations = [a.strip() for a in affil_text.split(',') if a.strip()]
         return affiliations
     else:
         return [a.strip() for a in affil_line.split(',') if a.strip()] if affil_line else []
-
+        
 def deduplicate_papers(papers):
     seen = set()
     unique = []
