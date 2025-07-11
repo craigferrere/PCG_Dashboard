@@ -188,17 +188,20 @@ def split_authors(authors_line):
         pre_and, after_and = authors_line.rsplit(' and ', 1)
         tokens = after_and.split()
         # If the second token is a letter and period, last author is next three tokens
-    if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-        # Middle initial detected, use 3 tokens
-        cutoff = 3
-    else:
-        cutoff = 2
-    last_author = ' '.join(tokens[:cutoff])
-    rest = tokens[cutoff:]
-    # Left side: split by comma for previous authors
-    authors = [a.strip() for a in pre_and.split(',') if a.strip()]
-    authors.append(last_author.strip())
-    return authors
+        
+        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+            # Middle initial detected, use 3 tokens
+            cutoff = 3
+        else:
+            cutoff = 2
+        
+        last_author = ' '.join(tokens[:cutoff])
+        rest = tokens[cutoff:]
+        
+        # Left side: split by comma for previous authors
+        authors = [a.strip() for a in pre_and.split(',') if a.strip()]
+        authors.append(last_author.strip())
+        return authors
     else:
         return [a.strip() for a in authors_line.split(',') if a.strip()]
 
