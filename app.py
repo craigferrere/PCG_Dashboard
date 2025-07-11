@@ -169,6 +169,17 @@ def save_processed_email_id(email_id):
     with open(EMAIL_IDS_FILE, 'a', encoding='utf-8') as f:
         f.write(f"{email_id}\n")
 
+def process_and_store_new_papers():
+    emails = fetch_and_cache_emails()
+    df = initialize_master_csv()
+    existing_ids = set(df['paper_id']) if not df.empty else set()
+    for email in emails:
+        for paper in extract_papers_from_body(email["body"]):
+            first_author = paper.get('authors', [''])[0] if paper.get('authors') else ""
+            paper_id = generate_paper_id(paper['title'], first_author)
+            if paper_id not in existing_ids:
+                add_paper_to_master(paper, 'new')
+
 # ========== IMPROVED AUTHOR/AFFILIATION SPLITTING ==========
 
 def split_authors(authors_line):
@@ -647,7 +658,7 @@ st.sidebar.image("harvard.png", width=120)
 
 # Add refresh button
 if st.sidebar.button("🔄 Refresh Papers"):
-    st.session_state["papers_to_show"] = get_all_papers_filtered()
+    st.session_state["papers_to_show"] = get_papers_by_status('new')
     st.session_state["optioned_papers"] = get_papers_by_status('optioned')
     st.session_state["solicited_papers"] = get_papers_by_status('solicited')
     st.rerun()
