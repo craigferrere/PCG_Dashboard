@@ -659,6 +659,13 @@ if st.sidebar.button("Clear Email Cache"):
     else:
         st.info("No cache file found.")
 
+if st.sidebar.button("Clear Processed Email IDs"):
+    if os.path.exists("processed_email_ids.txt"):
+        os.remove("processed_email_ids.txt")
+        st.success("Processed email IDs cleared! Please refresh the app.")
+    else:
+        st.info("No processed email IDs file found.")
+
 page = st.sidebar.radio(
     "Navigate",
     ["Dashboard", "Declined Papers", "Master Data"]
