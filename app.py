@@ -326,6 +326,7 @@ def split_authors_affiliations(body):
     lines = body.splitlines()
     new_lines = []
     affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
+
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
@@ -340,38 +341,48 @@ def split_authors_affiliations(body):
                             new_lines.append("# Affiliation: " + remainder)
                             break
                     else:
-                        new_lines.append(line)
+                        new_lines.append("# Author: " + content)
                 else:
-                    new_lines.append(line)
+                    new_lines.append("# Author: " + content)
                 continue
-            and_index = content.find(" and ")
+
+            # Normal split logic (with improved handling of middle initials)
+            and_index = content.rfind(" and ")
             if and_index == -1:
-                new_lines.append(line)
+                new_lines.append("# Author: " + content)
                 continue
-            
+
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
             tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
-            
+
             if len(tokens) >= 2:
                 if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
                     cutoff_tokens = tokens[:3]
-            else:
-                cutoff_tokens = tokens[:2]
-                
-            cutoff = ' '.join(cutoff_tokens)
-            split_match = re.search(re.escape(cutoff), after_and)
-            if split_match:
-                split_point = split_match.end()
-                final_author = after_and[:split_point].strip()
-                affiliations = after_and[split_point:].strip()
-                new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
-                if affiliations:
-                    new_lines.append("# Affiliation: " + affiliations)
-                continue
-            new_lines.append(line)
+                else:
+                    cutoff_tokens = tokens[:2]
+                cutoff = ' '.join(cutoff_tokens)
+                split_match = re.search(re.escape(cutoff), after_and)
+                if split_match:
+                    split_point = split_match.end()
+                    final_author = after_and[:split_point].strip()
+                    affiliations = after_and[split_point:].strip()
+
+                    # Yield multiple authors
+                    for author in before_and.split(","):
+                        name = author.strip()
+                        if name:
+                            new_lines.append("# Author: " + name)
+                    new_lines.append("# Author: " + final_author)
+
+                    if affiliations:
+                        new_lines.append("# Affiliation: " + affiliations)
+                    continue
+
+            new_lines.append("# Author: " + content)
         else:
             new_lines.append(line)
+
     return "\n".join(new_lines)
 
 def split_and_comma_list(line):
@@ -421,13 +432,18 @@ def extract_papers_from_body(text):
             affils_line = None
         elif line.startswith("# Publication:"):
             journal = line[len("# Publication:"):].strip()
-        elif line.startswith("# Author:") or line.startswith("# Authors:"):
-            authors_line = line.split(":", 1)[1].strip()
-        elif line.startswith("# Affiliation:") or line.startswith("# Affiliations:"):
-            affils_line = line.split(":", 1)[1].strip()
+        elif line.startswith("# Author:"):
+            if authors_line is None:
+                authors_line = []
+            authors_line.append(line.split(":", 1)[1].strip())
+    elif line.startswith("# Affiliation:"):
+        if affils_line is None:
+            affils_line = []
+        affils_line.append(line.split(":", 1)[1].strip())
     if title and authors_line:
-        authors = split_and_comma_list(authors_line)
-        affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
+        authors = authors_line 
+        affiliations = affils_line if affils_line else [""] * len(authors)
+        
         if len(affiliations) < len(authors):
             affiliations += [""] * (len(authors) - len(affiliations))
         elif len(affiliations) > len(authors):
@@ -538,7 +554,6 @@ def clean_email_body(body):
         r"^Keywords:.*\n(?:^[^\S\r\n]*\S.*\n)?",
         r"^Body preview:\s*$",
         r"\[image: Multiple version icon\]There are \d+ versions of this paper",
-        r"\*affiliation\s+(?:not\s+provided\s+to\s+SSRN)\*",
     ]
     
     for pattern in patterns_to_remove:
