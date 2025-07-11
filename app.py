@@ -98,7 +98,43 @@ def add_paper_to_master(paper_data, status):
 def get_papers_by_status(status):
     """Get papers by status from master CSV"""
     if not os.path.exists(MASTER_CSV):
-        return []
+        # Fallback to original CSV files if master doesn't exist
+        if status == 'optioned' and os.path.exists('optioned_papers.csv'):
+            papers = []
+            with open('optioned_papers.csv', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    title = row.get('title', "")
+                    authors = [a.strip() for a in row.get('authors', "").split(';') if a.strip()]
+                    journal = row.get('journal', "")
+                    affils = row.get('affiliations', "")
+                    affiliations = [a.strip() for a in affils.split(';') if a.strip()]
+                    papers.append({
+                        'title': title,
+                        'authors': authors,
+                        'affiliations': affiliations,
+                        'journal': journal,
+                    })
+            return papers
+        elif status == 'solicited' and os.path.exists('solicited_papers.csv'):
+            papers = []
+            with open('solicited_papers.csv', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    title = row.get('title', "")
+                    authors = [a.strip() for a in row.get('authors', "").split(';') if a.strip()]
+                    journal = row.get('journal', "")
+                    affils = row.get('affiliations', "")
+                    affiliations = [a.strip() for a in affils.split(';') if a.strip()]
+                    papers.append({
+                        'title': title,
+                        'authors': authors,
+                        'affiliations': affiliations,
+                        'journal': journal,
+                    })
+            return papers
+        else:
+            return []
     
     df = pd.read_csv(MASTER_CSV)
     papers = df[df['status'] == status].to_dict('records')
@@ -153,85 +189,69 @@ def save_processed_email_id(email_id):
 
 # ========== IMPROVED AUTHOR/AFFILIATION SPLITTING ==========
 
-def improved_split_authors_affiliations(text):
-    """
-    Improved function to split authors and affiliations
-    Uses more sophisticated pattern matching and context analysis
-    """
-    lines = text.splitlines()
+def split_authors_affiliations(body):
+    lines = body.splitlines()
     new_lines = []
-    
-    # Enhanced affiliation indicators
-    affiliation_keywords = {
-        'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 
-        'Department', 'Law', 'Business', 'Economics', 'Finance', 'Management',
-        'Academy', 'Foundation', 'Corporation', 'LLC', 'Inc', 'Ltd'
-    }
-    
-    # Common academic titles that indicate affiliation
-    academic_titles = {
-        'Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer',
-        'Research', 'Fellow', 'Scholar', 'Director', 'Chair', 'Dean'
-    }
-    
+
+    # Common affiliation indicators
+    affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
+
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
-            
-            # Handle multiple authors with "and"
-            if ' and ' in content:
-                # Split on "and" but be careful about institutional "and"
-                parts = content.split(' and ')
-                
-                # Check if the last part contains affiliation indicators
-                last_part = parts[-1]
-                last_part_words = last_part.split()
-                
-                # Look for affiliation patterns in the last part
-                affiliation_found = False
-                for i in range(len(last_part_words)):
-                    # Check if we have enough words to form a name
-                    if i >= 2:
-                        potential_name = ' '.join(last_part_words[:i+1])
-                        potential_affiliation = ' '.join(last_part_words[i+1:])
-                        
-                        # Check if potential affiliation contains affiliation keywords
-                        if any(keyword.lower() in potential_affiliation.lower() 
-                               for keyword in affiliation_keywords):
-                            # Split here
-                            authors_part = ' and '.join(parts[:-1]) + ' and ' + potential_name
-                            affiliation_part = potential_affiliation
-                            
-                            new_lines.append(f"# Author: {authors_part}")
-                            if affiliation_part.strip():
-                                new_lines.append(f"# Affiliation: {affiliation_part}")
-                            affiliation_found = True
-                            break
-                
-                if not affiliation_found:
-                    # Couldn't confidently split, keep as is
-                    new_lines.append(line)
-            else:
-                # Single author case
-                words = content.split()
-                if len(words) >= 4:
-                    # Try to find affiliation in single author case
-                    for i in range(2, min(6, len(words))):
-                        potential_name = ' '.join(words[:i])
-                        potential_affiliation = ' '.join(words[i:])
-                        
-                        if any(keyword.lower() in potential_affiliation.lower() 
-                               for keyword in affiliation_keywords):
-                            new_lines.append(f"# Author: {potential_name}")
-                            new_lines.append(f"# Affiliation: {potential_affiliation}")
+
+            # Handle sole author cases with affiliation leakage
+            if ' and ' not in content and ',' not in content:
+                tokens = content.split()
+                if len(tokens) >= 4:
+                    for i in range(2, min(5, len(tokens))):
+                        name = " ".join(tokens[:i])
+                        remainder = " ".join(tokens[i:])
+                        if any(word in affiliation_keywords for word in remainder.split()):
+                            new_lines.append("# Author: " + name)
+                            new_lines.append("# Affiliation: " + remainder)
                             break
                     else:
-                        new_lines.append(line)
+                        new_lines.append(line)  # couldn't confidently split
                 else:
                     new_lines.append(line)
+                continue
+
+            # Handle multiple authors
+            and_index = content.find(" and ")
+            if and_index == -1:
+                new_lines.append(line)
+                continue
+
+            before_and = content[:and_index]
+            after_and = content[and_index + len(" and "):].strip()
+
+            # Tokenize what's after "and" into capitalized words
+            tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
+
+            if len(tokens) >= 2:
+                # Check if the second token is a middle initial like "D."
+                if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+                    cutoff = f"{tokens[0]} {tokens[1]} {tokens[2]}"
+                else:
+                    cutoff = f"{tokens[0]} {tokens[1]}"
+
+                split_match = re.search(re.escape(cutoff), after_and)
+                if split_match:
+                    split_point = split_match.end()
+                    final_author = after_and[:split_point].strip()
+                    affiliations = after_and[split_point:].strip()
+
+                    new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
+                    if affiliations:
+                        new_lines.append("# Affiliation: " + affiliations)
+                    continue
+
+            # Fallback if we can't split properly
+            new_lines.append(line)
         else:
             new_lines.append(line)
-    
+
     return "\n".join(new_lines)
 
 # ========== IMPROVED EMAIL PROCESSING ==========
@@ -359,7 +379,7 @@ def clean_email_body(body):
     body = collapse_multiline_titles(body)
     body = tag_author_lines(body)
     body = flatten_author_blocks(body)
-    body = improved_split_authors_affiliations(body)
+    body = split_authors_affiliations(body)
     
     return body
 
@@ -899,6 +919,7 @@ if page == "Dashboard":
     with col2:
         st.header("Options")
         optioned = st.session_state["optioned_papers"]
+        st.write(f"Debug: Found {len(optioned)} optioned papers")
         if not optioned:
             st.write("No papers have been optioned yet.")
         else:
