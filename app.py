@@ -174,7 +174,9 @@ def process_and_store_new_papers():
     df = initialize_master_csv()
     existing_ids = set(df['paper_id']) if not df.empty else set()
     for email in emails:
-        for paper in extract_papers_from_body(email["body"]):
+        # First preprocess the email body to split authors and affiliations
+        processed_body = split_authors_affiliations(email["body"])
+        for paper in extract_papers_from_body(processed_body):
             first_author = paper.get('authors', [''])[0] if paper.get('authors') else ""
             paper_id = generate_paper_id(paper['title'], first_author)
             if paper_id not in existing_ids:
@@ -318,12 +320,19 @@ def split_authors_affiliations(body):
     lines = body.splitlines()
     new_lines = []
     affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
+    journal_keywords = {'Journal', 'Review', 'Quarterly', 'Annual', 'Proceedings', 'Conference', 'Symposium', 'Forthcoming', 'Working Paper', 'Research Paper'}
     debug_info = []
     
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
             debug_info.append(f"Processing: '{content}'")
+            
+            # Check if this line contains journal information (should be skipped)
+            content_lower = content.lower()
+            if any(keyword.lower() in content_lower for keyword in journal_keywords):
+                debug_info.append(f"Skipping journal line: '{content}'")
+                continue
             
             if ' and ' not in content and ',' not in content:
                 tokens = content.split()
@@ -394,6 +403,14 @@ def split_and_comma_list(line):
     if "debug_author_splitting" in st.session_state:
         st.session_state["debug_author_splitting"].append(f"split_and_comma_list input: '{line}'")
     
+    # Filter out lines that contain journal keywords
+    line_lower = line.lower()
+    journal_keywords = {'journal', 'review', 'quarterly', 'annual', 'proceedings', 'conference', 'symposium', 'forthcoming', 'working paper', 'research paper'}
+    if any(keyword in line_lower for keyword in journal_keywords):
+        if "debug_author_splitting" in st.session_state:
+            st.session_state["debug_author_splitting"].append(f"split_and_comma_list: Skipping journal line: '{line}'")
+        return []
+    
     parts = [p.strip() for p in line.split(',') if p.strip()]
     if parts and ' and ' in parts[-1]:
         before_and, after_and = parts[-1].rsplit(' and ', 1)
@@ -424,10 +441,22 @@ def split_and_comma_list(line):
             new_parts.append(last_author)
         parts = parts[:-1] + new_parts
     
-    if "debug_author_splitting" in st.session_state:
-        st.session_state["debug_author_splitting"].append(f"split_and_comma_list output: {parts}")
+    # Filter out parts that look like affiliations rather than names
+    affiliation_keywords = {'university', 'school', 'college', 'institute', 'center', 'faculty', 'department', 'downloads'}
+    filtered_parts = []
+    for part in parts:
+        part_lower = part.lower()
+        # Skip if it contains affiliation keywords and doesn't look like a name
+        if any(keyword in part_lower for keyword in affiliation_keywords) and len(part.split()) > 3:
+            if "debug_author_splitting" in st.session_state:
+                st.session_state["debug_author_splitting"].append(f"split_and_comma_list: Skipping affiliation-like part: '{part}'")
+            continue
+        filtered_parts.append(part)
     
-    return parts
+    if "debug_author_splitting" in st.session_state:
+        st.session_state["debug_author_splitting"].append(f"split_and_comma_list output: {filtered_parts}")
+    
+    return filtered_parts
 
 def extract_papers_from_body(text):
     lines = text.strip().splitlines()
@@ -636,7 +665,9 @@ def get_all_papers_filtered():
         
         for email in emails:
             try:
-                extracted_papers = extract_papers_from_body(email["body"])
+                # First preprocess the email body to split authors and affiliations
+                processed_body = split_authors_affiliations(email["body"])
+                extracted_papers = extract_papers_from_body(processed_body)
                 st.write(f"DEBUG: Extracted {len(extracted_papers)} papers from email")
                 for paper in extracted_papers:
                     try:
