@@ -378,14 +378,23 @@ def split_and_comma_list(line):
         before_and, after_and = parts[-1].rsplit(' and ', 1)
         before_and = before_and.strip()
         after_and = after_and.strip()
+        
+        # Handle middle initials in the last author
+        tokens = after_and.split()
+        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+            # Middle initial case: take exactly 3 tokens for last author
+            last_author = ' '.join(tokens[:3])
+        else:
+            # No middle initial: take first 2 tokens for last author
+            last_author = ' '.join(tokens[:2]) if len(tokens) >= 2 else after_and
+        
         new_parts = []
         if before_and:
             new_parts.append(before_and)
-        if after_and:
-            new_parts.append(after_and)
+        if last_author:
+            new_parts.append(last_author)
         parts = parts[:-1] + new_parts
     return parts
-
 def extract_papers_from_body(text):
     lines = text.strip().splitlines()
     papers = []
