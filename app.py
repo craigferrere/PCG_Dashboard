@@ -780,6 +780,23 @@ if st.sidebar.button("🧪 Test Middle Initial Case"):
     
     st.session_state["debug_author_splitting"] = ["=== TESTING MIDDLE INITIAL CASE ==="]
     processed_body = split_authors_affiliations(test_body)
+    
+    # Add debug output to show what the processed body looks like
+    st.session_state["debug_author_splitting"].append("=== AFTER split_authors_affiliations ===")
+    st.session_state["debug_author_splitting"].append("Processed body:")
+    for line in processed_body.splitlines():
+        st.session_state["debug_author_splitting"].append(f"  {line}")
+    
+    # Test extract_papers_from_body on the processed body
+    st.session_state["debug_author_splitting"].append("=== TESTING extract_papers_from_body ===")
+    papers = extract_papers_from_body(processed_body)
+    st.session_state["debug_author_splitting"].append(f"Extracted {len(papers)} papers")
+    for i, paper in enumerate(papers):
+        st.session_state["debug_author_splitting"].append(f"Paper {i+1}:")
+        st.session_state["debug_author_splitting"].append(f"  Title: {paper.get('title', 'N/A')}")
+        st.session_state["debug_author_splitting"].append(f"  Authors: {paper.get('authors', [])}")
+        st.session_state["debug_author_splitting"].append(f"  Affiliations: {paper.get('affiliations', [])}")
+    
     st.sidebar.success("Test case processed. Check debug info above.")
 
 page = st.sidebar.radio(
