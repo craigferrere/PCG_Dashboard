@@ -679,7 +679,7 @@ if st.sidebar.button("Clear Processed Email IDs"):
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Dashboard", "Declined Papers", "Master Data"]
+    ["Dashboard", "Master Data"]
 )
 
 if page == "Dashboard":
@@ -974,21 +974,6 @@ if page == "Dashboard":
                         add_paper_to_master(paper, 'declined')
                         st.session_state["solicited_papers"].pop(idx)
                         st.rerun()
-
-elif page == "Declined Papers":
-    st.title("Declined Papers")
-    declined_papers = get_papers_by_status('declined')
-    
-    if not declined_papers:
-        st.info("No declined papers found.")
-    else:
-        for paper in declined_papers:
-            title = escape_angle_brackets(paper.get('title', ''))
-            authors = paper.get('authors', [])
-            authors_line = " | ".join([escape_angle_brackets(a) for a in authors])
-            st.markdown(f"**{title}**")
-            st.write(authors_line)
-            st.markdown("---")
 
 elif page == "Master Data":
     st.title("Master Data Management")
