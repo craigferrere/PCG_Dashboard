@@ -321,6 +321,7 @@ def split_authors_affiliations(body):
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
+            st.write(f"DEBUG: Processing author line: '{content}'")
             if ' and ' not in content and ',' not in content:
                 tokens = content.split()
                 if len(tokens) >= 4:
@@ -330,6 +331,7 @@ def split_authors_affiliations(body):
                         if any(word in affiliation_keywords for word in remainder.split()):
                             new_lines.append("# Author: " + name)
                             new_lines.append("# Affiliation: " + remainder)
+                            st.write(f"DEBUG: Split single author: '{name}' | '{remainder}'")
                             break
                     else:
                         new_lines.append(line)
@@ -342,9 +344,11 @@ def split_authors_affiliations(body):
                 continue
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
+            st.write(f"DEBUG: Before 'and': '{before_and}' | After 'and': '{after_and}'")
 
             # Split into tokens to analyze the structure
             tokens = after_and.split()
+            st.write(f"DEBUG: Tokens after 'and': {tokens}")
             
             if len(tokens) >= 3:
                 # Check if second token is a middle initial (letter + period)
@@ -352,10 +356,12 @@ def split_authors_affiliations(body):
                     # Middle initial case: take exactly 3 tokens for last author
                     last_author = " ".join(tokens[:3])
                     affiliations = " ".join(tokens[3:])
+                    st.write(f"DEBUG: Middle initial detected. Last author: '{last_author}' | Affiliations: '{affiliations}'")
                 else:
                     # No middle initial: take first 2 tokens for last author
                     last_author = " ".join(tokens[:2])
                     affiliations = " ".join(tokens[2:])
+                    st.write(f"DEBUG: No middle initial. Last author: '{last_author}' | Affiliations: '{affiliations}'")
                 
                 new_lines.append("# Author: " + before_and.strip() + " and " + last_author)
                 if affiliations.strip():
@@ -395,6 +401,7 @@ def split_and_comma_list(line):
             new_parts.append(last_author)
         parts = parts[:-1] + new_parts
     return parts
+
 def extract_papers_from_body(text):
     lines = text.strip().splitlines()
     papers = []
