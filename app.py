@@ -318,11 +318,9 @@ def split_authors_affiliations(body):
     lines = body.splitlines()
     new_lines = []
     affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
-    
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
-            
             if ' and ' not in content and ',' not in content:
                 tokens = content.split()
                 if len(tokens) >= 4:
@@ -344,61 +342,41 @@ def split_authors_affiliations(body):
                 continue
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
-
-            # Split into tokens to analyze the structure
-            tokens = after_and.split()
-            
-            if len(tokens) >= 3:
-                # Check if second token is a middle initial (letter + period)
-                if re.match(r'^[A-Z]\.$', tokens[1]):
-                    # Middle initial case: take exactly 3 tokens for last author
-                    last_author = " ".join(tokens[:3])
-                    affiliations = " ".join(tokens[3:])
+            tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
+            if len(tokens) >= 2:
+                if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+                    cutoff = f"{tokens[0]} {tokens[1]} {tokens[2]}"
                 else:
-                    # No middle initial: take first 2 tokens for last author
-                    last_author = " ".join(tokens[:2])
-                    affiliations = " ".join(tokens[2:])
-                
-                new_lines.append("# Author: " + before_and.strip() + " and " + last_author)
-                if affiliations.strip():
-                    new_lines.append("# Affiliation: " + affiliations.strip())
-                continue
-            else:
-                # Fallback for short names
-                new_lines.append(line)
-                 
+                    cutoff = f"{tokens[0]} {tokens[1]}"
+                split_match = re.search(re.escape(cutoff), after_and)
+                if split_match:
+                    split_point = split_match.end()
+                    final_author = after_and[:split_point].strip()
+                    affiliations = after_and[split_point:].strip()
+                    new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
+                    if affiliations:
+                        new_lines.append("# Affiliation: " + affiliations)
+                    continue
+            new_lines.append(line)
         else:
             new_lines.append(line)
-    
     return "\n".join(new_lines)
 
 def split_and_comma_list(line):
     # Split on commas, then split the last element on ' and '
     if not line:
         return []
-    
     parts = [p.strip() for p in line.split(',') if p.strip()]
     if parts and ' and ' in parts[-1]:
         before_and, after_and = parts[-1].rsplit(' and ', 1)
         before_and = before_and.strip()
         after_and = after_and.strip()
-        
-        # Handle middle initials in the last author
-        tokens = after_and.split()
-        if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-            # Middle initial case: take exactly 3 tokens for last author
-            last_author = ' '.join(tokens[:3])
-        else:
-            # No middle initial: take first 2 tokens for last author
-            last_author = ' '.join(tokens[:2]) if len(tokens) >= 2 else after_and
-        
         new_parts = []
         if before_and:
             new_parts.append(before_and)
-        if last_author:
-            new_parts.append(last_author)
+        if after_and:
+            new_parts.append(after_and)
         parts = parts[:-1] + new_parts
-    
     return parts
 
 def extract_papers_from_body(text):
@@ -408,17 +386,10 @@ def extract_papers_from_body(text):
     journal = None
     authors_line = None
     affils_line = None
-    
-    # Add debug output
-    if "debug_author_splitting" in st.session_state:
-        st.session_state["debug_author_splitting"].append("=== extract_papers_from_body ===")
-    
     for line in lines:
         line = line.strip()
         if line.startswith("# Title:"):
             if title and authors_line:
-                if "debug_author_splitting" in st.session_state:
-                    st.session_state["debug_author_splitting"].append(f"Processing paper: title='{title}' authors_line='{authors_line}'")
                 authors = split_and_comma_list(authors_line)
                 affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
                 if len(affiliations) < len(authors):
@@ -440,15 +411,9 @@ def extract_papers_from_body(text):
             journal = line[len("# Publication:"):].strip()
         elif line.startswith("# Author:") or line.startswith("# Authors:"):
             authors_line = line.split(":", 1)[1].strip()
-            if "debug_author_splitting" in st.session_state:
-                st.session_state["debug_author_splitting"].append(f"Found author line: '{authors_line}'")
         elif line.startswith("# Affiliation:") or line.startswith("# Affiliations:"):
             affils_line = line.split(":", 1)[1].strip()
-            if "debug_author_splitting" in st.session_state:
-                st.session_state["debug_author_splitting"].append(f"Found affiliation line: '{affils_line}'")
     if title and authors_line:
-        if "debug_author_splitting" in st.session_state:
-            st.session_state["debug_author_splitting"].append(f"Processing final paper: title='{title}' authors_line='{authors_line}'")
         authors = split_and_comma_list(authors_line)
         affiliations = split_and_comma_list(affils_line) if affils_line else [""] * len(authors)
         if len(affiliations) < len(authors):
@@ -609,21 +574,18 @@ def get_all_papers_filtered():
         for email in emails:
             try:
                 extracted_papers = extract_papers_from_body(email["body"])
-                st.write(f"DEBUG: Extracted {len(extracted_papers)} papers from email")
                 for paper in extracted_papers:
                     try:
                         authors = paper.get("authors", [])
-                        st.write(f"DEBUG: Paper authors: {authors}")
                         first_author = ""
                         if isinstance(authors, list) and len(authors) > 0 and authors[0]:
                             first_author = str(authors[0])
                         
                         title = paper.get("title", "")
-                        if not title:  # Skip papers without titles
+                        if not title:
                             continue
                             
                         pid = generate_paper_id(title, first_author)
-                        # Skip if already declined, optioned, or solicited
                         if pid in declined_ids or pid in optioned_ids or pid in solicited_ids:
                             continue
                         new_papers.append(paper)
@@ -714,62 +676,6 @@ if st.sidebar.button("Clear Processed Email IDs"):
         st.success("Processed email IDs cleared! Please refresh the app.")
     else:
         st.info("No processed email IDs file found.")
-
-# Debug section
-if st.sidebar.checkbox("Show Debug Info"):
-    if "debug_author_splitting" in st.session_state:
-        st.sidebar.markdown("### Debug: Author Splitting")
-        for debug_line in st.session_state["debug_author_splitting"]:
-            st.sidebar.text(debug_line)
-    else:
-        st.sidebar.text("No debug info available")
-
-# Force debug processing
-if st.sidebar.button("🔍 Force Debug Processing"):
-    # Clear any existing debug info
-    if "debug_author_splitting" in st.session_state:
-        del st.session_state["debug_author_splitting"]
-    
-    # Force email processing to trigger debug
-    emails = fetch_and_cache_emails()
-    if emails:
-        # Process the first email to generate debug info
-        body = emails[0]["body"]
-        processed_body = split_authors_affiliations(body)
-        st.sidebar.success("Debug processing completed. Check debug info above.")
-    else:
-        st.sidebar.warning("No emails found to process.")
-
-# Test specific problematic case
-if st.sidebar.button("🧪 Test Middle Initial Case"):
-    # Clear any existing debug info
-    if "debug_author_splitting" in st.session_state:
-        del st.session_state["debug_author_splitting"]
-    
-    # Test case with middle initial
-    test_body = """# Title: Test Paper
-# Author: John Smith and Joe D. Flex Harvard University"""
-    
-    st.session_state["debug_author_splitting"] = ["=== TESTING MIDDLE INITIAL CASE ==="]
-    processed_body = split_authors_affiliations(test_body)
-    
-    # Add debug output to show what the processed body looks like
-    st.session_state["debug_author_splitting"].append("=== AFTER split_authors_affiliations ===")
-    st.session_state["debug_author_splitting"].append("Processed body:")
-    for line in processed_body.splitlines():
-        st.session_state["debug_author_splitting"].append(f"  {line}")
-    
-    # Test extract_papers_from_body on the processed body
-    st.session_state["debug_author_splitting"].append("=== TESTING extract_papers_from_body ===")
-    papers = extract_papers_from_body(processed_body)
-    st.session_state["debug_author_splitting"].append(f"Extracted {len(papers)} papers")
-    for i, paper in enumerate(papers):
-        st.session_state["debug_author_splitting"].append(f"Paper {i+1}:")
-        st.session_state["debug_author_splitting"].append(f"  Title: {paper.get('title', 'N/A')}")
-        st.session_state["debug_author_splitting"].append(f"  Authors: {paper.get('authors', [])}")
-        st.session_state["debug_author_splitting"].append(f"  Affiliations: {paper.get('affiliations', [])}")
-    
-    st.sidebar.success("Test case processed. Check debug info above.")
 
 page = st.sidebar.radio(
     "Navigate",
