@@ -379,7 +379,9 @@ def split_authors_affiliations(body):
     
     # Store debug info in session state for display
     if debug_info:
-        st.session_state["debug_author_splitting"] = debug_info
+        if "debug_author_splitting" not in st.session_state:
+            st.session_state["debug_author_splitting"] = []
+        st.session_state["debug_author_splitting"].extend(debug_info)
     
     return "\n".join(new_lines)
 
@@ -765,6 +767,20 @@ if st.sidebar.button("🔍 Force Debug Processing"):
         st.sidebar.success("Debug processing completed. Check debug info above.")
     else:
         st.sidebar.warning("No emails found to process.")
+
+# Test specific problematic case
+if st.sidebar.button("🧪 Test Middle Initial Case"):
+    # Clear any existing debug info
+    if "debug_author_splitting" in st.session_state:
+        del st.session_state["debug_author_splitting"]
+    
+    # Test case with middle initial
+    test_body = """# Title: Test Paper
+# Author: John Smith and Joe D. Flex Harvard University"""
+    
+    st.session_state["debug_author_splitting"] = ["=== TESTING MIDDLE INITIAL CASE ==="]
+    processed_body = split_authors_affiliations(test_body)
+    st.sidebar.success("Test case processed. Check debug info above.")
 
 page = st.sidebar.radio(
     "Navigate",
