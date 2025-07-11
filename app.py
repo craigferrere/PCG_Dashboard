@@ -342,22 +342,29 @@ def split_authors_affiliations(body):
                 continue
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
-            tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
-            if len(tokens) >= 2:
-                if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-                    cutoff = f"{tokens[0]} {tokens[1]} {tokens[2]}"
+
+            # Split into tokens to analyze the structure
+            tokens = after_and.split()
+            
+            if len(tokens) >= 3:
+                # Check if second token is a middle initial (letter + period)
+                if re.match(r'^[A-Z]\.$', tokens[1]):
+                    # Middle initial case: take exactly 3 tokens for last author
+                    last_author = " ".join(tokens[:3])
+                    affiliations = " ".join(tokens[3:])
                 else:
-                    cutoff = f"{tokens[0]} {tokens[1]}"
-                split_match = re.search(re.escape(cutoff), after_and)
-                if split_match:
-                    split_point = split_match.end()
-                    final_author = after_and[:split_point].strip()
-                    affiliations = after_and[split_point:].strip()
-                    new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
-                    if affiliations:
-                        new_lines.append("# Affiliation: " + affiliations)
-                    continue
-            new_lines.append(line)
+                    # No middle initial: take first 2 tokens for last author
+                    last_author = " ".join(tokens[:2])
+                    affiliations = " ".join(tokens[2:])
+                
+                new_lines.append("# Author: " + before_and.strip() + " and " + last_author)
+                if affiliations.strip():
+                    new_lines.append("# Affiliation: " + affiliations.strip())
+                continue
+            else:
+                # Fallback for short names
+                new_lines.append(line)
+                 
         else:
             new_lines.append(line)
     return "\n".join(new_lines)
