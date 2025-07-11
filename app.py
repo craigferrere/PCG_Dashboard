@@ -6,6 +6,9 @@ import csv
 import os
 import unicodedata
 import hashlib
+import json
+from datetime import datetime
+import pandas as pd
 
 # Set page config first!
 st.set_page_config(
@@ -14,23 +17,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-def check_password():
-    def password_entered():
-        if st.session_state["password"] == "7bpsBG6vJz":
-            st.session_state["authenticated"] = True
-            del st.session_state["password"]  # remove password from memory
-        else:
-            st.session_state["authenticated"] = False
-
-    if "authenticated" not in st.session_state:
-        st.text_input("Password:", type="password", on_change=password_entered, key="password")
-        st.stop()
-    elif not st.session_state["authenticated"]:
-        st.text_input("Password:", type="password", on_change=password_entered, key="password")
-        st.error("😕 Incorrect password")
-        st.stop()
-
-check_password()
+# ========== CONSTANTS ==========
+MASTER_CSV = "papers_master.csv"
+EMAIL_CACHE_FILE = "email_cache.json"
+EMAIL_IDS_FILE = "processed_email_ids.txt"
 
 # ========== UTILITY FUNCTIONS ==========
 
@@ -50,204 +40,339 @@ def normalize_simple_firstlast(name):
 def normalize_title(title):
     return re.sub(r'[^\w\s]', '', title).strip().lower()
 
-# Add this with the other filename declarations (around line 37)
-declined_filename = "declined_papers.csv"
-optioned_filename = "optioned_papers.csv"
-solicited_filename = "solicited_papers.csv"  # Add this linestrea
-
-def read_declined_set():
-    declined = set()
-    if os.path.exists(declined_filename):
-        with open(declined_filename, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                pid = row.get("paper_id") or ""
-                if pid:
-                    declined.add(row.get("paper_id"))
-    return declined
-
-def load_optioned_papers():
-    papers = []
-    if os.path.exists(optioned_filename):
-        with open(optioned_filename, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                title = row.get('title', "")
-                authors = [a.strip() for a in row.get('authors', "").split(';') if a.strip()]
-                # new fields:
-                journal = row.get('journal', "")
-                affils = row.get('affiliations', "")
-                affiliations = [a.strip() for a in affils.split(';') if a.strip()]
-                papers.append({
-                    'title': title,
-                    'authors': authors,
-                    'affiliations': affiliations,
-                    'journal': journal,
-                })
-    return papers
-
-def read_solicited_set():
-    solicited = set()
-    if os.path.exists(solicited_filename):
-        with open(solicited_filename, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                pid = row.get("paper_id", "")
-                if pid:
-                    solicited.add(pid)
-    return solicited
-
-def append_declined(title, author_list):
-    file_exists = os.path.exists(declined_filename)
-    first_author = author_list[0].strip() if author_list else ""
-    paper_id = generate_paper_id(title, first_author)
-    with open(declined_filename, "a", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors", "norm_title", "norm_first_author"
-        ])
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow({
-            "paper_id": paper_id,
-            "title": title.strip(),
-            "first_author": first_author,
-            "authors": "; ".join([a.strip() for a in author_list]),
-            "norm_title": normalize_title(title),
-            "norm_first_author": normalize_simple_firstlast(first_author)
-        })
-
-def append_optioned(title, author_list, affiliations, journal):
-    file_exists = os.path.exists(optioned_filename)
-    first_author = author_list[0].strip() if author_list else ""
-    paper_id = generate_paper_id(title, first_author)
-    with open(optioned_filename, "a", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors",
-            "journal", "affiliations",
-            "norm_title", "norm_first_author"
-        ])
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow({
-            "paper_id": paper_id,
-            "title": title.strip(),
-            "first_author": first_author,
-            "authors": "; ".join(a.strip() for a in author_list),
-            "journal": journal or "",
-            "affiliations": "; ".join(a.strip() for a in affiliations),
-            "norm_title": normalize_title(title),
-            "norm_first_author": normalize_simple_firstlast(first_author)
-        })
-
-def append_solicited(title, author_list, affiliations, journal):
-    file_exists = os.path.exists(solicited_filename)
-    first_author = author_list[0].strip() if author_list else ""
-    paper_id = generate_paper_id(title, first_author)
-    with open(solicited_filename, "a", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors",
-            "journal", "affiliations",
-            "norm_title", "norm_first_author"
-        ])
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow({
-            "paper_id": paper_id,
-            "title": title.strip(),
-            "first_author": first_author,
-            "authors": "; ".join(a.strip() for a in author_list),
-            "journal": journal or "",
-            "affiliations": "; ".join(a.strip() for a in affiliations),
-            "norm_title": normalize_title(title),
-            "norm_first_author": normalize_simple_firstlast(first_author)
-        })
-
-
-def read_optioned_set():
-    """
-    Returns a set of paper_id for every row in optioned_papers.csv,
-    computing legacy IDs if no paper_id column exists.
-    """
-    optioned = set()
-    if not os.path.exists(optioned_filename):
-        return optioned
-
-    with open(optioned_filename, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            pid = row.get("paper_id", "")
-            if pid:
-                optioned.add(pid)
-    return optioned
-
-    header = rows[0]
-    has_pid = "paper_id" in header
-    # locate the norm_* columns
-    idx_title = header.index("title")
-    idx_author = header.index("first_author")
-    idx_norm_title = header.index("norm_title")
-    idx_norm_first = header.index("norm_first_author")
-    pid_idx = header.index("paper_id") if has_pid else None
-
-    for row in rows[1:]:
-        if has_pid:
-            pid = row[pid_idx]
-        else:
-            norm_title = row[idx_norm_title]
-            norm_first = row[idx_norm_first]
-            pid = hashlib.md5((norm_title + norm_first).encode("utf-8")).hexdigest()
-        optioned.add(pid)
-
-    return optioned
-
-
-def remove_optioned(title, author_list):
-    norm_title = normalize_title(title)
-    norm_first_author = normalize_simple_firstlast(author_list[0]) if author_list else ""
-    if not os.path.exists(optioned_filename):
-        return
-    rows = []
-    with open(optioned_filename, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            if row.get("norm_title") == norm_title and row.get("norm_first_author") == norm_first_author:
-                continue
-            rows.append(row)
-    with open(optioned_filename, "w", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors",
-            "journal", "affiliations",
-            "norm_title", "norm_first_author"
-        ])
-        writer.writeheader()
-        writer.writerows(rows)
-
 def generate_paper_id(title, first_author):
     norm_title = normalize_title(title)
     norm_author = normalize_simple_firstlast(first_author)
     combined = norm_title + norm_author
     return hashlib.md5(combined.encode('utf-8')).hexdigest()
 
-solicitable_author_simple = set()
-with open('solicitable_authors.csv', newline='', encoding='utf-8') as csvfile:
-    reader = csv.DictReader(csvfile)
-    header = reader.fieldnames[0]
-    for row in reader:
-        fullname = row.get(header, '').strip()
-        norm = normalize_simple_firstlast(fullname)
-        if norm:
-            solicitable_author_simple.add(norm)
+# ========== MASTER CSV MANAGEMENT ==========
+
+def initialize_master_csv():
+    """Initialize the master CSV file if it doesn't exist"""
+    if not os.path.exists(MASTER_CSV):
+        columns = [
+            'paper_id', 'title', 'first_author', 'authors', 'journal', 'affiliations',
+            'norm_title', 'norm_first_author', 'status', 'date_added', 'date_updated'
+        ]
+        df = pd.DataFrame(columns=columns)
+        df.to_csv(MASTER_CSV, index=False)
+        return df
+    return pd.read_csv(MASTER_CSV)
+
+def add_paper_to_master(paper_data, status):
+    """Add or update a paper in the master CSV"""
+    df = initialize_master_csv()
+    
+    # Generate paper ID
+    first_author = paper_data.get('authors', [''])[0] if paper_data.get('authors') else ""
+    paper_id = generate_paper_id(paper_data['title'], first_author)
+    
+    # Check if paper already exists
+    existing = df[df['paper_id'] == paper_id]
+    
+    if existing.empty:
+        # Add new paper
+        new_row = {
+            'paper_id': paper_id,
+            'title': paper_data['title'],
+            'first_author': first_author,
+            'authors': '; '.join(paper_data.get('authors', [])),
+            'journal': paper_data.get('journal', ''),
+            'affiliations': '; '.join(paper_data.get('affiliations', [])),
+            'norm_title': normalize_title(paper_data['title']),
+            'norm_first_author': normalize_simple_firstlast(first_author),
+            'status': status,
+            'date_added': datetime.now().isoformat(),
+            'date_updated': datetime.now().isoformat()
+        }
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    else:
+        # Update existing paper status
+        df.loc[df['paper_id'] == paper_id, 'status'] = status
+        df.loc[df['paper_id'] == paper_id, 'date_updated'] = datetime.now().isoformat()
+    
+    df.to_csv(MASTER_CSV, index=False)
+    return paper_id
+
+def get_papers_by_status(status):
+    """Get papers by status from master CSV"""
+    if not os.path.exists(MASTER_CSV):
+        return []
+    
+    df = pd.read_csv(MASTER_CSV)
+    papers = df[df['status'] == status].to_dict('records')
+    
+    # Convert back to the format expected by the UI
+    result = []
+    for paper in papers:
+        result.append({
+            'title': paper['title'],
+            'authors': [a.strip() for a in paper['authors'].split(';') if a.strip()],
+            'affiliations': [a.strip() for a in paper['affiliations'].split(';') if a.strip()],
+            'journal': paper['journal']
+        })
+    return result
+
+def get_all_paper_ids_by_status(status):
+    """Get all paper IDs for a given status"""
+    if not os.path.exists(MASTER_CSV):
+        return set()
+    
+    df = pd.read_csv(MASTER_CSV)
+    return set(df[df['status'] == status]['paper_id'].tolist())
+
+# ========== EMAIL CACHING ==========
+
+def load_email_cache():
+    """Load cached email data"""
+    if os.path.exists(EMAIL_CACHE_FILE):
+        try:
+            with open(EMAIL_CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_email_cache(cache_data):
+    """Save email cache to file"""
+    with open(EMAIL_CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cache_data, f, ensure_ascii=False, indent=2)
+
+def get_processed_email_ids():
+    """Get list of already processed email IDs"""
+    if os.path.exists(EMAIL_IDS_FILE):
+        with open(EMAIL_IDS_FILE, 'r', encoding='utf-8') as f:
+            return set(line.strip() for line in f if line.strip())
+    return set()
+
+def save_processed_email_id(email_id):
+    """Save processed email ID"""
+    with open(EMAIL_IDS_FILE, 'a', encoding='utf-8') as f:
+        f.write(f"{email_id}\n")
+
+# ========== IMPROVED AUTHOR/AFFILIATION SPLITTING ==========
+
+def improved_split_authors_affiliations(text):
+    """
+    Improved function to split authors and affiliations
+    Uses more sophisticated pattern matching and context analysis
+    """
+    lines = text.splitlines()
+    new_lines = []
+    
+    # Enhanced affiliation indicators
+    affiliation_keywords = {
+        'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 
+        'Department', 'Law', 'Business', 'Economics', 'Finance', 'Management',
+        'Academy', 'Foundation', 'Corporation', 'LLC', 'Inc', 'Ltd'
+    }
+    
+    # Common academic titles that indicate affiliation
+    academic_titles = {
+        'Professor', 'Associate Professor', 'Assistant Professor', 'Lecturer',
+        'Research', 'Fellow', 'Scholar', 'Director', 'Chair', 'Dean'
+    }
+    
+    for line in lines:
+        if line.startswith("# Author:"):
+            content = line[len("# Author:"):].strip()
+            
+            # Handle multiple authors with "and"
+            if ' and ' in content:
+                # Split on "and" but be careful about institutional "and"
+                parts = content.split(' and ')
+                
+                # Check if the last part contains affiliation indicators
+                last_part = parts[-1]
+                last_part_words = last_part.split()
+                
+                # Look for affiliation patterns in the last part
+                affiliation_found = False
+                for i in range(len(last_part_words)):
+                    # Check if we have enough words to form a name
+                    if i >= 2:
+                        potential_name = ' '.join(last_part_words[:i+1])
+                        potential_affiliation = ' '.join(last_part_words[i+1:])
+                        
+                        # Check if potential affiliation contains affiliation keywords
+                        if any(keyword.lower() in potential_affiliation.lower() 
+                               for keyword in affiliation_keywords):
+                            # Split here
+                            authors_part = ' and '.join(parts[:-1]) + ' and ' + potential_name
+                            affiliation_part = potential_affiliation
+                            
+                            new_lines.append(f"# Author: {authors_part}")
+                            if affiliation_part.strip():
+                                new_lines.append(f"# Affiliation: {affiliation_part}")
+                            affiliation_found = True
+                            break
+                
+                if not affiliation_found:
+                    # Couldn't confidently split, keep as is
+                    new_lines.append(line)
+            else:
+                # Single author case
+                words = content.split()
+                if len(words) >= 4:
+                    # Try to find affiliation in single author case
+                    for i in range(2, min(6, len(words))):
+                        potential_name = ' '.join(words[:i])
+                        potential_affiliation = ' '.join(words[i:])
+                        
+                        if any(keyword.lower() in potential_affiliation.lower() 
+                               for keyword in affiliation_keywords):
+                            new_lines.append(f"# Author: {potential_name}")
+                            new_lines.append(f"# Affiliation: {potential_affiliation}")
+                            break
+                    else:
+                        new_lines.append(line)
+                else:
+                    new_lines.append(line)
+        else:
+            new_lines.append(line)
+    
+    return "\n".join(new_lines)
+
+# ========== IMPROVED EMAIL PROCESSING ==========
+
+def fetch_and_cache_emails():
+    """Fetch emails and cache them for better performance"""
+    cache = load_email_cache()
+    processed_ids = get_processed_email_ids()
+    
+    # Check if we have recent cache (within last hour)
+    if cache.get('last_updated'):
+        last_updated = datetime.fromisoformat(cache['last_updated'])
+        if (datetime.now() - last_updated).seconds < 3600:  # 1 hour
+            return cache.get('emails', [])
+    
+    imap_host = "imap.gmail.com"
+    username = "PCGssrn@gmail.com"
+    app_password = "lbcf ioir uuoy wqui"
+    
+    try:
+        print("Connecting to Gmail...")
+        mail = imaplib.IMAP4_SSL(imap_host)
+        mail.login(username, app_password)
+        print("Login successful.")
+        
+        mail.select("INBOX")
+        status, message_numbers = mail.search(None, "ALL")
+        
+        if status != "OK":
+            print("No emails found.")
+            mail.logout()
+            return cache.get('emails', [])
+        
+        emails = []
+        for num in message_numbers[0].split():
+            try:
+                status, msg_data = mail.fetch(num, '(RFC822)')
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        email_id = msg.get('Message-ID', str(num))
+                        
+                        # Skip if already processed
+                        if email_id in processed_ids:
+                            continue
+                        
+                        body = ""
+                        if msg.is_multipart():
+                            for part in msg.walk():
+                                if part.get_content_type() == "text/plain" and part.get("Content-Disposition") is None:
+                                    charset = part.get_content_charset() or "utf-8"
+                                    body += part.get_payload(decode=True).decode(charset, errors="ignore")
+                        else:
+                            charset = msg.get_content_charset() or "utf-8"
+                            body = msg.get_payload(decode=True).decode(charset, errors="ignore")
+                        
+                        # Clean the body
+                        body = clean_email_body(body)
+                        
+                        emails.append({
+                            "body": body.strip(),
+                            "email_id": email_id
+                        })
+                        
+                        # Mark as processed
+                        save_processed_email_id(email_id)
+                        
+            except Exception as e:
+                print(f"Error processing email {num}: {e}")
+                continue
+        
+        mail.logout()
+        
+        # Update cache
+        cache['emails'] = emails
+        cache['last_updated'] = datetime.now().isoformat()
+        save_email_cache(cache)
+        
+        print(f"Fetched {len(emails)} new emails.")
+        return emails
+        
+    except Exception as e:
+        print(f"Error connecting to email: {e}")
+        return cache.get('emails', [])
+
+def clean_email_body(body):
+    """Clean email body with improved regex patterns"""
+    # Remove HTML tags
+    body = re.sub(r"<[^>]+>", "", body)
+    
+    # Remove metadata lines
+    patterns_to_remove = [
+        r"^Number of pages: \d+\s+Posted: \d{1,2} [A-Z][a-z]{2} 202\d(?:\s+Last Revised: \d{1,2} [A-Z][a-z]{2} 202\d)?\s*$",
+        r"^Posted: \d{1,2} [A-Z][a-z]{2} 202\d\s*$",
+        r"^Downloads\d+\s*$",
+        r"^(Fiduciary|Shareholder|Hedge Funds|Mutual Funds|ESG|Institutional Investors|Corporate|Stakeholder|Merger|Directors|Compensation|Securities|SPAC|Proxy Advisors)\s*$",
+        r"^Keywords:.*\n(?:^[^\S\r\n]*\S.*\n)?",
+        r"^Body preview:\s*$",
+        r"\[image: Multiple version icon\]There are \d+ versions of this paper",
+        r"\*affiliation\s+(?:not\s+provided\s+to\s+SSRN)\*",
+    ]
+    
+    for pattern in patterns_to_remove:
+        body = re.sub(pattern, "", body, flags=re.MULTILINE | re.IGNORECASE)
+    
+    # Replace affiliation placeholders
+    body = body.replace("*affiliation not provided to SSRN*", "No affiliation")
+    
+    # Process publication markers
+    body = re.sub(
+        r"\*(.*?)\n(.*?)\*\s*",
+        lambda m: f"# Publication: {m.group(1).strip()} {m.group(2).strip()}\n\n",
+        body
+    )
+    body = re.sub(
+        r"\*(.*?)\*\s*",
+        lambda m: f"# Publication: {m.group(1).strip()}\n\n",
+        body
+    )
+    
+    # Clean up whitespace
+    body = re.sub(r'(\n\s*){2,}', '\n\n', body)
+    
+    # Process the text through the pipeline
+    body = collapse_multiline_titles(body)
+    body = tag_author_lines(body)
+    body = flatten_author_blocks(body)
+    body = improved_split_authors_affiliations(body)
+    
+    return body
+
+# ========== LEGACY FUNCTIONS (keeping for compatibility) ==========
 
 def collapse_multiline_titles(text):
     lines = text.split('\n')
     collapsed = []
     i = 0
     while i < len(lines):
-        # Detect line like "1." or "23." — numbered title markers
         if re.match(r"^\s*\d+\.\s*$", lines[i]):
             i += 1
             title_lines = []
-            # Gather next lines that are likely part of the title
             while i < len(lines) and lines[i].strip() and not re.match(r"^(Posted:|Downloads|Number of pages:|Keywords:)", lines[i]):
                 title_lines.append(lines[i].strip())
                 i += 1
@@ -268,25 +393,20 @@ def tag_author_lines(text):
 
         if line.startswith("# Title:"):
             j = i + 1
-            # Skip blank lines
             while j < len(lines) and not lines[j].strip():
                 new_lines.append(lines[j])
                 j += 1
-            # Skip # Publication line if present
             if j < len(lines) and lines[j].startswith("# Publication:"):
                 new_lines.append(lines[j])
                 j += 1
                 while j < len(lines) and not lines[j].strip():
                     new_lines.append(lines[j])
                     j += 1
-            # Tag first author line
             if j < len(lines) and not lines[j].startswith("#"):
                 new_lines.append("# Authors: " + lines[j])
                 j += 1
-                # Continue with rest of the body
                 i = j - 1
         i += 1
-
     return "\n".join(new_lines)
 
 def flatten_author_blocks(text):
@@ -298,15 +418,12 @@ def flatten_author_blocks(text):
         line = lines[i]
 
         if line.startswith("# Authors:"):
-            # Start collecting block
             block = [line.replace("# Authors:", "").strip()]
             i += 1
             blank_seen = False
 
             while i < len(lines):
                 current = lines[i].strip()
-
-                # Stop if we hit a new section or a second blank line
                 if current.startswith("#"):
                     break
                 if current == "":
@@ -315,7 +432,6 @@ def flatten_author_blocks(text):
                     blank_seen = True
                     i += 1
                     continue
-
                 block.append(current)
                 i += 1
 
@@ -327,221 +443,22 @@ def flatten_author_blocks(text):
 
     return "\n".join(new_lines)
 
-def split_authors_affiliations(body):
-    lines = body.splitlines()
-    new_lines = []
-
-    # Common affiliation indicators
-    affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
-
-    for line in lines:
-        if line.startswith("# Author:"):
-            content = line[len("# Author:"):].strip()
-
-            # Handle sole author cases with affiliation leakage
-            if ' and ' not in content and ',' not in content:
-                tokens = content.split()
-                if len(tokens) >= 4:
-                    for i in range(2, min(5, len(tokens))):
-                        name = " ".join(tokens[:i])
-                        remainder = " ".join(tokens[i:])
-                        if any(word in affiliation_keywords for word in remainder.split()):
-                            new_lines.append("# Author: " + name)
-                            new_lines.append("# Affiliation: " + remainder)
-                            break
-                    else:
-                        new_lines.append(line)  # couldn't confidently split
-                else:
-                    new_lines.append(line)
-                continue
-
-            # Handle multiple authors
-            and_index = content.find(" and ")
-            if and_index == -1:
-                new_lines.append(line)
-                continue
-
-            before_and = content[:and_index]
-            after_and = content[and_index + len(" and "):].strip()
-
-            # Tokenize what's after "and" into capitalized words
-            tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
-
-            if len(tokens) >= 2:
-                # Check if the second token is a middle initial like "D."
-                if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-                    cutoff = f"{tokens[0]} {tokens[1]} {tokens[2]}"
-                else:
-                    cutoff = f"{tokens[0]} {tokens[1]}"
-
-                split_match = re.search(re.escape(cutoff), after_and)
-                if split_match:
-                    split_point = split_match.end()
-                    final_author = after_and[:split_point].strip()
-                    affiliations = after_and[split_point:].strip()
-
-                    new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
-                    if affiliations:
-                        new_lines.append("# Affiliation: " + affiliations)
-                    continue
-
-            # Fallback if we can't split properly
-            new_lines.append(line)
-        else:
-            new_lines.append(line)
-
-    return "\n".join(new_lines)
-
-
-def fetch_all_ssrn_emails():
-    imap_host = "imap.gmail.com"
-    username = "PCGssrn@gmail.com"
-    app_password = "lbcf ioir uuoy wqui"  # GMAIL PASSWORD
-
-    print("Connecting to Gmail...")
-    mail = imaplib.IMAP4_SSL(imap_host)
-    mail.login(username, app_password)
-    print("Login successful.")
-
-    mail.select("INBOX")
-    status, message_numbers = mail.search(None, "ALL")
-
-    if status != "OK":
-        print("No emails found.")
-        mail.logout()
-        return []
-
-    emails = []
-    for num in message_numbers[0].split():
-        status, msg_data = mail.fetch(num, '(RFC822)')
-        for response_part in msg_data:
-            if isinstance(response_part, tuple):
-                msg = email.message_from_bytes(response_part[1])
-                body = ""
-
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        if part.get_content_type() == "text/plain" and part.get("Content-Disposition") is None:
-                            charset = part.get_content_charset() or "utf-8"
-                            body += part.get_payload(decode=True).decode(charset, errors="ignore")
-                else:
-                    charset = msg.get_content_charset() or "utf-8"
-                    body = msg.get_payload(decode=True).decode(charset, errors="ignore")
-
-                body = re.sub(r"<[^>]+>", "", body)
-                body = re.sub(
-                    r"^Number of pages: \d+\s+Posted: \d{1,2} [A-Z][a-z]{2} 202\d(?:\s+Last Revised: \d{1,2} [A-Z][a-z]{2} 202\d)?\s*$",
-                    "",
-                    body,
-                    flags=re.MULTILINE
-                )
-                body = re.sub(r"^Posted: \d{1,2} [A-Z][a-z]{2} 202\d\s*$", "", body, flags=re.MULTILINE)
-                body = re.sub(r"^Downloads\d+\s*$", "", body, flags=re.MULTILINE)
-                body = re.sub(
-                    r"^(Fiduciary|Shareholder|Hedge Funds|Mutual Funds|ESG|Institutional Investors|Corporate|Stakeholder|Merger|Directors|Compensation|Securities|SPAC|Proxy Advisors)\s*$",
-                    "",
-                    body,
-                    flags=re.MULTILINE
-                )
-                body = re.sub(
-                    r"^Keywords:.*\n(?:^[^\S\r\n]*\S.*\n)?",
-                    "",
-                    body,
-                    flags=re.MULTILINE
-                )
-                body = collapse_multiline_titles(body)
-                body = body.replace("*affiliation not provided to SSRN*", "No affiliation")
-                body = re.sub(r"\*affiliation\s+(?:not\s+provided\s+to\s+SSRN)\*", "No affiliation", body, flags=re.IGNORECASE)
-                body = re.sub(r"^Body preview:\s*$", "", body, flags=re.MULTILINE)
-
-
-                body = re.sub(
-                    r"\*(.*?)\n(.*?)\*\s*",  # Two-line version
-                    lambda m: f"# Publication: {m.group(1).strip()} {m.group(2).strip()}\n\n",
-                    body
-                )
-                body = re.sub(
-                    r"\*(.*?)\*\s*",  # Single-line version
-                    lambda m: f"# Publication: {m.group(1).strip()}\n\n",
-                    body
-                )
-
-                body = re.sub(
-                    r"(#\.\n)([^\n]*\n)(# Publication:)",
-                    r"\1\3",
-                    body
-                )
-
-                body = re.sub(r"\[image: Multiple version icon\]There are \d+ versions of this paper", "", body)
-
-                body = re.sub(r'(\n\s*){2,}', '\n\n', body)
-
-                body = tag_author_lines(body)
-                body = flatten_author_blocks(body)
-                body = split_authors_affiliations(body)
-
-                emails.append({
-                    "body": body.strip()
-                })
-
-
-    mail.logout()
-    print(f"Fetched {len(emails)} emails.")
-    return emails
-
-def deduplicate_papers(papers):
-    seen = set()
-    unique = []
-    for paper in papers:
-        key = (
-            normalize_title(paper['title']),
-            normalize_simple_firstlast(paper['authors'][0]) if paper.get('authors') else ""
-        )
-        if key not in seen:
-            seen.add(key)
-            unique.append(paper)
-    return unique
-
-def escape_angle_brackets(text):
-    if not text:
-        return ""
-    return text.replace('<', '&lt;').replace('>', '&gt;')
-
-def remove_urls(text):
-    if not text:
-        return ""
-    return re.sub(r'https?://\S+|www\.\S+', '', text).strip()
-
-def strip_all_hyperlinks(text):
-    return re.sub(r'\s*<[^>]*>', '', text).strip()
-
-def remove_downloads_trailer(text):
-    text = re.sub(r'(,)?\s*Downloads,?\s*\d+\s*$', '', text).strip()
-    text = re.sub(r',\s*\d+\s*$', '', text).strip()
-    text = re.sub(r'(?:,|\band\b)?\s*\d+\s*$', '', text).strip()
-    return text
-
 def split_authors(authors_line):
     authors_line = authors_line.strip()
-    authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)  # remove trailing numeric refs like (1)
+    authors_line = re.sub(r'\s*\(\d+\)\s*$', '', authors_line)
 
-    # Handle final author introduced by " and "
     if ' and ' in authors_line:
         pre_and, final_author = authors_line.rsplit(' and ', 1)
         authors = [a.strip() for a in pre_and.split(',') if a.strip()]
         authors.append(final_author.strip())
         return authors
     else:
-        # No "and" — assume a single author or malformed input
-    
         return [a.strip() for a in authors_line.split(',') if a.strip()]
-
 
 def split_affiliations(affil_line):
     affil_line = affil_line.strip()
-    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)  # Remove trailing numeric refs like (1)
+    affil_line = re.sub(r'\s*\(\d+\)\s*$', '', affil_line)
 
-    # Handle " and " before final affiliation
     if ' and ' in affil_line:
         pre_and, final_affil = affil_line.rsplit(' and ', 1)
         parts = [a.strip() for a in pre_and.split(',') if a.strip()]
@@ -561,7 +478,6 @@ def extract_papers_from_body(text):
     for line in lines:
         line = line.strip()
         if line.startswith("# Title:"):
-            # Start a new paper block
             if title and authors_line:
                 authors = split_authors(authors_line)
                 affiliations = split_affiliations(affils_line) if affils_line else [""] * len(authors)
@@ -578,7 +494,6 @@ def extract_papers_from_body(text):
                     'journal': journal,
                 })
 
-            # Reset all fields
             title = line[len("# Title:"):].strip()
             journal = None
             authors_line = None
@@ -593,7 +508,6 @@ def extract_papers_from_body(text):
         elif line.startswith("# Affiliation:") or line.startswith("# Affiliations:"):
             affils_line = line.split(":", 1)[1].strip()
 
-    # Don't forget the last paper in the loop
     if title and authors_line:
         authors = split_authors(authors_line)
         affiliations = split_affiliations(affils_line) if affils_line else [""] * len(authors)
@@ -612,12 +526,29 @@ def extract_papers_from_body(text):
 
     return papers
 
+def deduplicate_papers(papers):
+    seen = set()
+    unique = []
+    for paper in papers:
+        key = (
+            normalize_title(paper['title']),
+            normalize_simple_firstlast(paper['authors'][0]) if paper.get('authors') else ""
+        )
+        if key not in seen:
+            seen.add(key)
+            unique.append(paper)
+    return unique
+
+# ========== MAIN DATA LOADING ==========
+
 def get_all_papers_filtered():
+    """Get all papers filtered by status"""
     try:
-        emails = fetch_all_ssrn_emails()
-        declined_set = read_declined_set()
-        optioned_set = read_optioned_set()
-        solicited_set = read_solicited_set()
+        emails = fetch_and_cache_emails()
+        declined_ids = get_all_paper_ids_by_status('declined')
+        optioned_ids = get_all_paper_ids_by_status('optioned')
+        solicited_ids = get_all_paper_ids_by_status('solicited')
+        
         new_papers = []
         
         for email in emails:
@@ -626,18 +557,16 @@ def get_all_papers_filtered():
                 for paper in extracted_papers:
                     try:
                         authors = paper.get("authors", [])
-                        # Safely get first author
                         first_author = ""
                         if isinstance(authors, list) and len(authors) > 0 and authors[0]:
                             first_author = str(authors[0])
                         
                         title = paper.get("title", "")
-                        if not title:  # Skip papers without titles
+                        if not title:
                             continue
                             
                         pid = generate_paper_id(title, first_author)
-                        # Skip if already declined, optioned, or solicited
-                        if pid in declined_set or pid in optioned_set or pid in solicited_set:
+                        if pid in declined_ids or pid in optioned_ids or pid in solicited_ids:
                             continue
                         new_papers.append(paper)
                     except Exception as paper_error:
@@ -653,118 +582,64 @@ def get_all_papers_filtered():
         st.error(f"Unexpected error while fetching and filtering papers: {outer_error}")
         return []
 
-        
+# ========== LOAD SOLICITABLE AUTHORS ==========
 
-def load_solicited_papers():
-    papers = []
-    if os.path.exists(solicited_filename):
-        with open(solicited_filename, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                title = row.get('title', "")
-                authors = [a.strip() for a in row.get('authors', "").split(';') if a.strip()]
-                journal = row.get('journal', "")
-                affils = row.get('affiliations', "")
-                affiliations = [a.strip() for a in affils.split(';') if a.strip()]
-                papers.append({
-                    'title': title,
-                    'authors': authors,
-                    'affiliations': affiliations,
-                    'journal': journal,
-                })
-    return papers
-
-def append_solicited_accepted(title, author_list, affiliations, journal):
-    file_exists = os.path.exists("solicited_accepted.csv")
-    first_author = author_list[0].strip() if author_list else ""
-    paper_id = generate_paper_id(title, first_author)
-    with open("solicited_accepted.csv", "a", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors",
-            "journal", "affiliations",
-            "norm_title", "norm_first_author"
-        ])
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow({
-            "paper_id": paper_id,
-            "title": title.strip(),
-            "first_author": first_author,
-            "authors": "; ".join(a.strip() for a in author_list),
-            "journal": journal or "",
-            "affiliations": "; ".join(a.strip() for a in affiliations),
-            "norm_title": normalize_title(title),
-            "norm_first_author": normalize_simple_firstlast(first_author)
-        })
-
-def append_solicited_declined(title, author_list, affiliations, journal):
-    file_exists = os.path.exists("solicited_declined.csv")
-    first_author = author_list[0].strip() if author_list else ""
-    paper_id = generate_paper_id(title, first_author)
-    with open("solicited_declined.csv", "a", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors",
-            "journal", "affiliations",
-            "norm_title", "norm_first_author"
-        ])
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow({
-            "paper_id": paper_id,
-            "title": title.strip(),
-            "first_author": first_author,
-            "authors": "; ".join(a.strip() for a in author_list),
-            "journal": journal or "",
-            "affiliations": "; ".join(a.strip() for a in affiliations),
-            "norm_title": normalize_title(title),
-            "norm_first_author": normalize_simple_firstlast(first_author)
-        })
-
-def remove_solicited(title, author_list):
-    norm_title = normalize_title(title)
-    norm_first_author = normalize_simple_firstlast(author_list[0]) if author_list else ""
-    if not os.path.exists(solicited_filename):
-        return
-    rows = []
-    with open(solicited_filename, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
+solicitable_author_simple = set()
+try:
+    with open('solicitable_authors.csv', newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        header = reader.fieldnames[0]
         for row in reader:
-            if row.get("norm_title") == norm_title and row.get("norm_first_author") == norm_first_author:
-                continue  # skip this one
-            rows.append(row)
-    with open(solicited_filename, "w", newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=[
-            "paper_id", "title", "first_author", "authors",
-            "journal", "affiliations",
-            "norm_title", "norm_first_author"
-        ])
-        writer.writeheader()
-        writer.writerows(rows)
+            fullname = row.get(header, '').strip()
+            norm = normalize_simple_firstlast(fullname)
+            if norm:
+                solicitable_author_simple.add(norm)
+except Exception as e:
+    st.error(f"Error loading solicitable authors: {e}")
+
+# ========== UTILITY FUNCTIONS FOR UI ==========
+
+def escape_angle_brackets(text):
+    if not text:
+        return ""
+    return text.replace('<', '&lt;').replace('>', '&gt;')
+
+def remove_downloads_trailer(text):
+    text = re.sub(r'(,)?\s*Downloads,?\s*\d+\s*$', '', text).strip()
+    text = re.sub(r',\s*\d+\s*$', '', text).strip()
+    text = re.sub(r'(?:,|\band\b)?\s*\d+\s*$', '', text).strip()
+    return text
+
+# ========== PASSWORD AUTHENTICATION ==========
+
+def check_password():
+    def password_entered():
+        if st.session_state["password"] == "7bpsBG6vJz":
+            st.session_state["authenticated"] = True
+            del st.session_state["password"]
+        else:
+            st.session_state["authenticated"] = False
+
+    if "authenticated" not in st.session_state:
+        st.text_input("Password:", type="password", on_change=password_entered, key="password")
+        st.stop()
+    elif not st.session_state["authenticated"]:
+        st.text_input("Password:", type="password", on_change=password_entered, key="password")
+        st.error("😕 Incorrect password")
+        st.stop()
+
+check_password()
 
 # ========== SESSION STATE INITIALIZATION ==========
-
-if "declined_set" not in st.session_state:
-    st.session_state["declined_set"] = read_declined_set()
-if "optioned_set" not in st.session_state:
-    st.session_state["optioned_set"] = read_optioned_set()
-if "solicited_set" not in st.session_state:
-    st.session_state["solicited_set"] = read_solicited_set()
 
 if "papers_to_show" not in st.session_state:
     st.session_state["papers_to_show"] = get_all_papers_filtered()
 
 if "optioned_papers" not in st.session_state:
-    solicited_set = st.session_state["solicited_set"]
-    optioned_papers = load_optioned_papers()
-    filtered_optioned_papers = []
-    for paper in optioned_papers:
-        pid = generate_paper_id(paper["title"], paper["authors"][0] if paper.get("authors") else "")
-        if pid not in solicited_set:
-            filtered_optioned_papers.append(paper)
-    st.session_state["optioned_papers"] = filtered_optioned_papers
+    st.session_state["optioned_papers"] = get_papers_by_status('optioned')
 
 if "solicited_papers" not in st.session_state:
-    st.session_state["solicited_papers"] = load_solicited_papers()
+    st.session_state["solicited_papers"] = get_papers_by_status('solicited')
 
 if "show_email_draft" not in st.session_state:
     st.session_state["show_email_draft"] = False
@@ -780,13 +655,20 @@ if "manual_email_text" not in st.session_state:
 st.sidebar.title("PCG Dashboard")
 st.sidebar.image("harvard.png", width=120)
 
+# Add refresh button
+if st.sidebar.button("🔄 Refresh Papers"):
+    st.session_state["papers_to_show"] = get_all_papers_filtered()
+    st.session_state["optioned_papers"] = get_papers_by_status('optioned')
+    st.session_state["solicited_papers"] = get_papers_by_status('solicited')
+    st.rerun()
+
 page = st.sidebar.radio(
     "Navigate",
-    ["Dashboard", "Declined Papers"]
+    ["Dashboard", "Declined Papers", "Master Data"]
 )
 
 if page == "Dashboard":
-
+    # Email draft section
     if st.session_state.get("show_email_draft") and st.session_state.get("draft_paper_data"):
         paper = st.session_state["draft_paper_data"]
         authors = paper.get("authors", [])
@@ -929,19 +811,14 @@ if page == "Dashboard":
                 if st.button("Edit Email Draft", key="edit_email_button"):
                     st.session_state["manual_email_edit"] = True
                     st.rerun()
-            
     
     col1, col2, col3 = st.columns([2, 2, 2])
 
     with col1:
         st.header("New Papers")
-        # sort session-state list into the three tiers you want
         if st.button("Decline ALL New Papers"):
             for paper in st.session_state["papers_to_show"]:
-                append_declined(
-                    paper["title"],
-                    paper.get("authors", [])
-                )
+                add_paper_to_master(paper, 'declined')
             st.session_state["papers_to_show"] = []
             st.success("All visible papers moved to Declined.")
             st.rerun()
@@ -1001,21 +878,14 @@ if page == "Dashboard":
 
                 with col_decline:
                     if st.button("Decline", key=decline_key):
-                        append_declined(paper['title'], paper.get("authors", []))
+                        add_paper_to_master(paper, 'declined')
                         st.session_state["papers_to_show"].pop(idx)
                         st.rerun()
                 with col_option:
                     if st.button("Option", key=option_key):
-                        append_optioned(
-                            paper['title'],
-                            paper.get('authors', []),
-                            paper.get('affiliations', []),
-                            paper.get('journal', "")
-                        )
-                        # move it into column 2 for this session
+                        add_paper_to_master(paper, 'optioned')
                         st.session_state["optioned_papers"].append(paper)
                         st.session_state["papers_to_show"].pop(idx)
-                       # Prepare email draft data for the expander at the top
                         st.session_state["show_email_draft"] = True
                         st.session_state["draft_paper_data"] = {
                             "title": paper["title"],
@@ -1050,21 +920,14 @@ if page == "Dashboard":
                 solicit_key = f"solicit_{idx}_{paper['title']}"
                 with col_decline:
                     if st.button("Decline", key=decline_key):
-                        append_declined(paper['title'], paper.get("authors", []))
-                        remove_optioned(paper['title'], paper.get("authors", []))
+                        add_paper_to_master(paper, 'declined')
                         st.session_state["optioned_papers"].pop(idx)
                         st.rerun()
                 with col_solicit:
                     if st.button("Solicit", key=solicit_key):
-                        remove_optioned(paper['title'], paper.get('authors', []))  # persistently remove from file
+                        add_paper_to_master(paper, 'solicited')
                         st.session_state["optioned_papers"].pop(idx)
                         st.session_state["solicited_papers"].append(paper)
-                        append_solicited(
-                            paper['title'],
-                            paper.get('authors', []),
-                            paper.get('affiliations', []),
-                            paper.get('journal', "")
-                        )
                         st.rerun()
                 st.markdown("---")
 
@@ -1076,8 +939,7 @@ if page == "Dashboard":
         else:
             for idx, paper in enumerate(solicited):
                 escaped_title = escape_angle_brackets(paper['title'])
-                clean_authors = [escape_angle_brackets(remove_downloads_trailer(a)) for a in paper.get('authors', []) if
-                                 a]
+                clean_authors = [escape_angle_brackets(remove_downloads_trailer(a)) for a in paper.get('authors', []) if a]
                 st.markdown(f"**{escaped_title}**")
                 st.write(" and ".join(clean_authors))
                 st.markdown("---")
@@ -1088,45 +950,60 @@ if page == "Dashboard":
 
                 with col_accept:
                     if st.button("Accept", key=accept_key):
-                        append_solicited_accepted(
-                            paper['title'],
-                            paper.get('authors', []),
-                            paper.get('affiliations', []),
-                            paper.get('journal', "")
-                        )
-                        remove_solicited(paper['title'], paper.get('authors', []))  # persistently remove from file
+                        add_paper_to_master(paper, 'accepted')
                         st.session_state["solicited_papers"].pop(idx)
                         st.rerun()
 
                 with col_decline:
                     if st.button("Decline", key=decline_key):
-                        append_solicited_declined(
-                            paper['title'],
-                            paper.get('authors', []),
-                            paper.get('affiliations', []),
-                            paper.get('journal', "")
-                        )
-                        remove_solicited(paper['title'], paper.get('authors', []))  # persistently remove from file
+                        add_paper_to_master(paper, 'declined')
                         st.session_state["solicited_papers"].pop(idx)
                         st.rerun()
 
 elif page == "Declined Papers":
     st.title("Declined Papers")
-
-    if os.path.exists(declined_filename):
-        with open(declined_filename, newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            if not rows:
-                st.info("No declined papers found.")
-            else:
-                for row in rows:
-                    title = escape_angle_brackets(row.get('title', ''))
-                    authors = row.get('authors', '')
-                    clean_authors = [escape_angle_brackets(a.strip()) for a in authors.split(';') if a.strip()]
-                    authors_line = " | ".join(clean_authors)
-                    st.markdown(f"**{title}**")
-                    st.write(authors_line)
-                    st.markdown("---")
+    declined_papers = get_papers_by_status('declined')
+    
+    if not declined_papers:
+        st.info("No declined papers found.")
     else:
-        st.info("No declined papers file found.")
+        for paper in declined_papers:
+            title = escape_angle_brackets(paper.get('title', ''))
+            authors = paper.get('authors', [])
+            authors_line = " | ".join([escape_angle_brackets(a) for a in authors])
+            st.markdown(f"**{title}**")
+            st.write(authors_line)
+            st.markdown("---")
+
+elif page == "Master Data":
+    st.title("Master Data Management")
+    
+    if os.path.exists(MASTER_CSV):
+        df = pd.read_csv(MASTER_CSV)
+        st.write(f"Total papers in master database: {len(df)}")
+        
+        # Status distribution
+        status_counts = df['status'].value_counts()
+        st.write("**Papers by Status:**")
+        for status, count in status_counts.items():
+            st.write(f"- {status}: {count}")
+        
+        # Show recent papers
+        st.write("**Recent Papers:**")
+        recent_papers = df.sort_values('date_added', ascending=False).head(10)
+        for _, paper in recent_papers.iterrows():
+            st.write(f"- {paper['title']} ({paper['status']})")
+    else:
+        st.info("No master data file found. It will be created when you first process papers.")
+    
+    # Add data export functionality
+    if st.button("Export Master Data"):
+        if os.path.exists(MASTER_CSV):
+            df = pd.read_csv(MASTER_CSV)
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download Master Data CSV",
+                data=csv,
+                file_name="papers_master_export.csv",
+                mime="text/csv"
+            ) 
