@@ -21,7 +21,7 @@ st.set_page_config(
 
 def check_password():
     def password_entered():
-        if st.session_state.get["password"] == "7bpsBG6vJz":
+        if st.session_state.get("password") == "7bpsBG6vJz":
             st.session_state["authenticated"] = True
             del st.session_state["password"]
         else:
