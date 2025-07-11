@@ -553,6 +553,7 @@ def get_all_papers_filtered():
     """Get all papers filtered by status"""
     try:
         emails = fetch_and_cache_emails()
+        st.write(f"Fetched {len(emails)} emails from inbox.")
         declined_ids = get_all_paper_ids_by_status('declined')
         optioned_ids = get_all_paper_ids_by_status('optioned')
         solicited_ids = get_all_paper_ids_by_status('solicited')
