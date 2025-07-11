@@ -516,16 +516,9 @@ def clean_email_body(body):
     body = tag_author_lines(body)
     body = flatten_author_blocks(body)
     body = split_authors_affiliations(body)
-
-   # --- TEST CASE INJECTION ---
-    if "Troeger" not in body:
-        body += "\n# Author: Luca Enriques, Casimiro A. Nigro and Tobias H. Troeger\n"
-    
-    # Run the final parsing step
-    body = split_authors_affiliations(body)
     
     # DEBUG: Show the processed body in Streamlit
-    if "Troeger" in body:
+    if "Bodie" in body:
         st.write("🧪 Final body snippet (after split_authors_affiliations):")
         st.code(body, language="markdown") 
     
