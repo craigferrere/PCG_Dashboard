@@ -195,10 +195,10 @@ def split_authors(authors_line):
         cutoff = 2
     last_author = ' '.join(tokens[:cutoff])
     rest = tokens[cutoff:]
-        # Left side: split by comma for previous authors
-        authors = [a.strip() for a in pre_and.split(',') if a.strip()]
-        authors.append(last_author.strip())
-        return authors
+    # Left side: split by comma for previous authors
+    authors = [a.strip() for a in pre_and.split(',') if a.strip()]
+    authors.append(last_author.strip())
+    return authors
     else:
         return [a.strip() for a in authors_line.split(',') if a.strip()]
 
