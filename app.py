@@ -348,24 +348,27 @@ def split_authors_affiliations(body):
             if and_index == -1:
                 new_lines.append(line)
                 continue
+            
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
             tokens = re.findall(r'\b[A-Z][a-zA-Z\.\']*\b', after_and)
+            
             if len(tokens) >= 2:
-            if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
-                cutoff_tokens = tokens[:3]
+                if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
+                    cutoff_tokens = tokens[:3]
             else:
                 cutoff_tokens = tokens[:2]
+                
             cutoff = ' '.join(cutoff_tokens)
-                split_match = re.search(re.escape(cutoff), after_and)
-                if split_match:
-                    split_point = split_match.end()
-                    final_author = after_and[:split_point].strip()
-                    affiliations = after_and[split_point:].strip()
-                    new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
-                    if affiliations:
-                        new_lines.append("# Affiliation: " + affiliations)
-                    continue
+            split_match = re.search(re.escape(cutoff), after_and)
+            if split_match:
+                split_point = split_match.end()
+                final_author = after_and[:split_point].strip()
+                affiliations = after_and[split_point:].strip()
+                new_lines.append("# Author: " + before_and.strip() + " and " + final_author)
+                if affiliations:
+                    new_lines.append("# Affiliation: " + affiliations)
+                continue
             new_lines.append(line)
         else:
             new_lines.append(line)
