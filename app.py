@@ -653,6 +653,13 @@ if st.sidebar.button("🔄 Refresh Papers"):
     st.session_state["solicited_papers"] = get_papers_by_status('solicited')
     st.rerun()
 
+if st.sidebar.button("Clear Email Cache"):
+    if os.path.exists("email_cache.json"):
+        os.remove("email_cache.json")
+        st.success("Email cache cleared! Please refresh the app.")
+    else:
+        st.info("No cache file found.")
+
 page = st.sidebar.radio(
     "Navigate",
     ["Dashboard", "Declined Papers", "Master Data"]
