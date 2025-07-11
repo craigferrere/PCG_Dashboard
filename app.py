@@ -436,10 +436,10 @@ def extract_papers_from_body(text):
             if authors_line is None:
                 authors_line = []
             authors_line.append(line.split(":", 1)[1].strip())
-    elif line.startswith("# Affiliation:"):
-        if affils_line is None:
-            affils_line = []
-        affils_line.append(line.split(":", 1)[1].strip())
+        elif line.startswith("# Affiliation:"):
+            if affils_line is None:
+                affils_line = []
+            affils_line.append(line.split(":", 1)[1].strip())
     if title and authors_line:
         authors = authors_line 
         affiliations = affils_line if affils_line else [""] * len(authors)
