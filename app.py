@@ -9,6 +9,8 @@ import hashlib
 import json
 from datetime import datetime
 import pandas as pd
+st.write("Current working directory:", os.getcwd())
+st.write("Files in directory:", os.listdir())
 
 # Set page config first!
 st.set_page_config(
