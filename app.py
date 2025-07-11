@@ -605,18 +605,21 @@ def get_all_papers_filtered():
         for email in emails:
             try:
                 extracted_papers = extract_papers_from_body(email["body"])
+                st.write(f"DEBUG: Extracted {len(extracted_papers)} papers from email")
                 for paper in extracted_papers:
                     try:
                         authors = paper.get("authors", [])
+                        st.write(f"DEBUG: Paper authors: {authors}")
                         first_author = ""
                         if isinstance(authors, list) and len(authors) > 0 and authors[0]:
                             first_author = str(authors[0])
                         
                         title = paper.get("title", "")
-                        if not title:
+                        if not title:  # Skip papers without titles
                             continue
                             
                         pid = generate_paper_id(title, first_author)
+                        # Skip if already declined, optioned, or solicited
                         if pid in declined_ids or pid in optioned_ids or pid in solicited_ids:
                             continue
                         new_papers.append(paper)
@@ -716,6 +719,22 @@ if st.sidebar.checkbox("Show Debug Info"):
             st.sidebar.text(debug_line)
     else:
         st.sidebar.text("No debug info available")
+
+# Force debug processing
+if st.sidebar.button("🔍 Force Debug Processing"):
+    # Clear any existing debug info
+    if "debug_author_splitting" in st.session_state:
+        del st.session_state["debug_author_splitting"]
+    
+    # Force email processing to trigger debug
+    emails = fetch_and_cache_emails()
+    if emails:
+        # Process the first email to generate debug info
+        body = emails[0]["body"]
+        processed_body = split_authors_affiliations(body)
+        st.sidebar.success("Debug processing completed. Check debug info above.")
+    else:
+        st.sidebar.warning("No emails found to process.")
 
 page = st.sidebar.radio(
     "Navigate",
