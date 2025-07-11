@@ -174,9 +174,7 @@ def process_and_store_new_papers():
     df = initialize_master_csv()
     existing_ids = set(df['paper_id']) if not df.empty else set()
     for email in emails:
-        # First preprocess the email body to split authors and affiliations
-        processed_body = split_authors_affiliations(email["body"])
-        for paper in extract_papers_from_body(processed_body):
+        for paper in extract_papers_from_body(email["body"]):
             first_author = paper.get('authors', [''])[0] if paper.get('authors') else ""
             paper_id = generate_paper_id(paper['title'], first_author)
             if paper_id not in existing_ids:
@@ -320,19 +318,10 @@ def split_authors_affiliations(body):
     lines = body.splitlines()
     new_lines = []
     affiliation_keywords = {'University', 'School', 'College', 'Institute', 'Center', 'Faculty', 'Department'}
-    journal_keywords = {'Journal', 'Review', 'Quarterly', 'Annual', 'Proceedings', 'Conference', 'Symposium', 'Forthcoming', 'Working Paper', 'Research Paper'}
-    debug_info = []
     
     for line in lines:
         if line.startswith("# Author:"):
             content = line[len("# Author:"):].strip()
-            debug_info.append(f"Processing: '{content}'")
-            
-            # Check if this line contains journal information (should be skipped)
-            content_lower = content.lower()
-            if any(keyword.lower() in content_lower for keyword in journal_keywords):
-                debug_info.append(f"Skipping journal line: '{content}'")
-                continue
             
             if ' and ' not in content and ',' not in content:
                 tokens = content.split()
@@ -343,7 +332,6 @@ def split_authors_affiliations(body):
                         if any(word in affiliation_keywords for word in remainder.split()):
                             new_lines.append("# Author: " + name)
                             new_lines.append("# Affiliation: " + remainder)
-                            debug_info.append(f"Single author split: '{name}' | '{remainder}'")
                             break
                     else:
                         new_lines.append(line)
@@ -356,11 +344,9 @@ def split_authors_affiliations(body):
                 continue
             before_and = content[:and_index]
             after_and = content[and_index + len(" and "):].strip()
-            debug_info.append(f"Before 'and': '{before_and}' | After 'and': '{after_and}'")
 
             # Split into tokens to analyze the structure
             tokens = after_and.split()
-            debug_info.append(f"Tokens after 'and': {tokens}")
             
             if len(tokens) >= 3:
                 # Check if second token is a middle initial (letter + period)
@@ -368,12 +354,10 @@ def split_authors_affiliations(body):
                     # Middle initial case: take exactly 3 tokens for last author
                     last_author = " ".join(tokens[:3])
                     affiliations = " ".join(tokens[3:])
-                    debug_info.append(f"Middle initial detected. Last author: '{last_author}' | Affiliations: '{affiliations}'")
                 else:
                     # No middle initial: take first 2 tokens for last author
                     last_author = " ".join(tokens[:2])
                     affiliations = " ".join(tokens[2:])
-                    debug_info.append(f"No middle initial. Last author: '{last_author}' | Affiliations: '{affiliations}'")
                 
                 new_lines.append("# Author: " + before_and.strip() + " and " + last_author)
                 if affiliations.strip():
@@ -386,29 +370,11 @@ def split_authors_affiliations(body):
         else:
             new_lines.append(line)
     
-    # Store debug info in session state for display
-    if debug_info:
-        if "debug_author_splitting" not in st.session_state:
-            st.session_state["debug_author_splitting"] = []
-        st.session_state["debug_author_splitting"].extend(debug_info)
-    
     return "\n".join(new_lines)
 
 def split_and_comma_list(line):
     # Split on commas, then split the last element on ' and '
     if not line:
-        return []
-    
-    # Add debug output
-    if "debug_author_splitting" in st.session_state:
-        st.session_state["debug_author_splitting"].append(f"split_and_comma_list input: '{line}'")
-    
-    # Filter out lines that contain journal keywords
-    line_lower = line.lower()
-    journal_keywords = {'journal', 'review', 'quarterly', 'annual', 'proceedings', 'conference', 'symposium', 'forthcoming', 'working paper', 'research paper'}
-    if any(keyword in line_lower for keyword in journal_keywords):
-        if "debug_author_splitting" in st.session_state:
-            st.session_state["debug_author_splitting"].append(f"split_and_comma_list: Skipping journal line: '{line}'")
         return []
     
     parts = [p.strip() for p in line.split(',') if p.strip()]
@@ -417,22 +383,14 @@ def split_and_comma_list(line):
         before_and = before_and.strip()
         after_and = after_and.strip()
         
-        # Add debug output
-        if "debug_author_splitting" in st.session_state:
-            st.session_state["debug_author_splitting"].append(f"split_and_comma_list: before_and='{before_and}' after_and='{after_and}'")
-        
         # Handle middle initials in the last author
         tokens = after_and.split()
         if len(tokens) >= 3 and re.match(r'^[A-Z]\.$', tokens[1]):
             # Middle initial case: take exactly 3 tokens for last author
             last_author = ' '.join(tokens[:3])
-            if "debug_author_splitting" in st.session_state:
-                st.session_state["debug_author_splitting"].append(f"split_and_comma_list: MIDDLE INITIAL detected, last_author='{last_author}'")
         else:
             # No middle initial: take first 2 tokens for last author
             last_author = ' '.join(tokens[:2]) if len(tokens) >= 2 else after_and
-            if "debug_author_splitting" in st.session_state:
-                st.session_state["debug_author_splitting"].append(f"split_and_comma_list: no middle initial, last_author='{last_author}'")
         
         new_parts = []
         if before_and:
@@ -441,22 +399,7 @@ def split_and_comma_list(line):
             new_parts.append(last_author)
         parts = parts[:-1] + new_parts
     
-    # Filter out parts that look like affiliations rather than names
-    affiliation_keywords = {'university', 'school', 'college', 'institute', 'center', 'faculty', 'department', 'downloads'}
-    filtered_parts = []
-    for part in parts:
-        part_lower = part.lower()
-        # Skip if it contains affiliation keywords and doesn't look like a name
-        if any(keyword in part_lower for keyword in affiliation_keywords) and len(part.split()) > 3:
-            if "debug_author_splitting" in st.session_state:
-                st.session_state["debug_author_splitting"].append(f"split_and_comma_list: Skipping affiliation-like part: '{part}'")
-            continue
-        filtered_parts.append(part)
-    
-    if "debug_author_splitting" in st.session_state:
-        st.session_state["debug_author_splitting"].append(f"split_and_comma_list output: {filtered_parts}")
-    
-    return filtered_parts
+    return parts
 
 def extract_papers_from_body(text):
     lines = text.strip().splitlines()
@@ -665,9 +608,7 @@ def get_all_papers_filtered():
         
         for email in emails:
             try:
-                # First preprocess the email body to split authors and affiliations
-                processed_body = split_authors_affiliations(email["body"])
-                extracted_papers = extract_papers_from_body(processed_body)
+                extracted_papers = extract_papers_from_body(email["body"])
                 st.write(f"DEBUG: Extracted {len(extracted_papers)} papers from email")
                 for paper in extracted_papers:
                     try:
