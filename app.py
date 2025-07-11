@@ -903,7 +903,6 @@ if page == "Dashboard":
     with col2:
         st.header("Options")
         optioned = st.session_state["optioned_papers"]
-        st.write(f"Debug: Found {len(optioned)} optioned papers")
         if not optioned:
             st.write("No papers have been optioned yet.")
         else:
